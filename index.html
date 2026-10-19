@@ -156,6 +156,9 @@ main { padding-block: 12px 32px; }
 /* ---------- 表格 ---------- */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
 .tbl { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.table-wrap.fit { width: fit-content; max-width: 100%; }
+.table-wrap.fit .tbl { width: auto; }
+.table-wrap.fit .tbl th, .table-wrap.fit .tbl td { padding-inline: 12px; }
 .tbl th, .tbl td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 .tbl th { font-size: .78rem; letter-spacing: .06em; color: var(--muted); font-weight: 700; background: var(--surface); white-space: nowrap; }
 .tbl td.nowrap, .tbl .nowrap { white-space: nowrap; }
@@ -542,7 +545,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   <!-- 聯絡資料 -->
   <section class="section printable" id="sec-contacts" data-tab="contacts">
     <div class="ph"></div>
-    <div class="table-wrap"><table class="tbl" id="contactTable"></table></div>
+    <div class="table-wrap fit"><table class="tbl" id="contactTable"></table></div>
   </section>
 
   <!-- 特殊照護 -->
