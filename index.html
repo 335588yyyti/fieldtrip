@@ -380,6 +380,10 @@ dialog {
 dialog::backdrop { background: rgb(0 0 0 / .45); }
 dialog form { display: grid; gap: 14px; padding: 18px; }
 dialog h3 { font-size: 1.1rem; }
+.sex-btn { cursor: pointer; font: inherit; font-weight: 700; font-size: .82rem; line-height: 1.5; }
+.sex-btn:hover { filter: brightness(.95); outline: 2px solid var(--g-line); }
+.gender-range { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 10px; background: var(--paper); border-radius: var(--r); }
+.gender-range input { width: 9em; }
 #confirmMsg { white-space: pre-line; line-height: 1.6; font-weight: 500; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 fieldset { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px 12px; margin: 0; }
@@ -595,7 +599,13 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
         <div class="row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <input type="file" id="importFile" accept=".csv,.txt,.tsv,.xlsx,.xls">
         </div>
-        <textarea id="importText" rows="6" placeholder="或在這裡貼上 Excel 表格內容（含標題列）"></textarea>
+        <textarea id="importText" rows="6" placeholder="或在這裡貼上 Excel 表格內容（有沒有標題列都可以）"></textarea>
+        <div class="gender-range">
+          <b>依座號設定性別</b>
+          <label class="inline">男生座號 <input type="text" id="im-boys" placeholder="例：1-15"></label>
+          <label class="inline">女生座號 <input type="text" id="im-girls" placeholder="例：16-30"></label>
+          <span class="hint">可寫 1-15、1~15 或 1,3,5；有填就以這裡為準，名單裡沒有性別欄時特別方便。</span>
+        </div>
         <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
           <label class="inline"><input type="radio" name="importMode" id="im-replace" value="replace" checked> 取代目前名單（分組會清空）</label>
           <label class="inline"><input type="radio" name="importMode" id="im-append" value="append"> 加到目前名單後面</label>
@@ -1212,6 +1222,21 @@ function fillUnassigned(k) {
   return created;
 }
 
+// 「1-15, 20, 22~24」→ {1,…,15,20,22,23,24}
+function parseNoRanges(text) {
+  const set = new Set();
+  String(text || '').replace(/[，、；;\s]+/g, ',').split(',').forEach(part => {
+    const m = part.match(/^(\d+)\s*[-~～–到至]\s*(\d+)$/);
+    if (m) { let a = +m[1], b = +m[2]; if (a > b) [a, b] = [b, a]; for (let i = a; i <= b && i - a < 500; i++) set.add(i); }
+    else if (/^\d+$/.test(part)) set.add(+part);
+  });
+  return set;
+}
+function setGender(s, g) {
+  s.gender = g;
+  state.rooms.groups.forEach(r => { if (r.gender && r.gender !== g) r.members = r.members.filter(id => id !== s.id); });   // 不同性別的房間要移出
+}
+
 /* ---------- 遊覽車 ---------- */
 // 每一排：左側 A B、走道、右側 C D；最後一排可為 5 人座（中間 M）。
 // 門會佔掉該排一側的兩個座位：前門在第 1 排右側、安全門在左側、後車門在右側。
@@ -1474,12 +1499,17 @@ async function doImport() {
   const { list, cols } = rowsToStudents(rows);
   if (!list.length) { toast('沒有讀到任何學生，請確認有「姓名」這一欄。'); return; }
   const replace = $('#im-replace').checked;
+  // 依座號範圍設定性別
+  const boys = parseNoRanges($('#im-boys').value), girls = parseNoRanges($('#im-girls').value);
+  list.forEach(s => { const n = parseFloat(s.no); if (boys.has(n)) s.gender = 'M'; else if (girls.has(n)) s.gender = 'F'; });
+  const nM = list.filter(s => s.gender === 'M').length, nF = list.filter(s => s.gender === 'F').length;
   const s0 = list[0];
   const contact = (n, p) => [n, p].filter(Boolean).join(' ');
   const msg = [`讀到 ${list.length} 位學生。`,
     `欄位判斷：${cols.join('｜')}`,
     `第一位：${s0.no} ${s0.name}${s0.gender ? `（${gtxt(s0.gender)}）` : ''}${s0.phone ? `，手機 ${s0.phone}` : ''}` +
       `${contact(s0.ec1Name, s0.ec1Phone) ? `，聯絡人 ${contact(s0.ec1Name, s0.ec1Phone)}` : ''}${contact(s0.ec2Name, s0.ec2Phone) ? `、${contact(s0.ec2Name, s0.ec2Phone)}` : ''}`,
+    `性別：男 ${nM} 人、女 ${nF} 人${list.length - nM - nF ? `、未填 ${list.length - nM - nF} 人` : ''}`,
     replace && state.students.length && !state.isSample ? `會取代目前的 ${state.students.length} 位學生，並清空所有分組。` : '',
     '判斷正確嗎？'].filter(Boolean).join('\n');
   if (!(await confirmBox(msg, '正確，匯入', '取消'))) return;
@@ -1488,7 +1518,7 @@ async function doImport() {
     for (const k of Object.keys(BOARDS)) state[k].groups = [];
   } else state.students.push(...list);
   state.isSample = false;
-  $('#importFile').value = ''; $('#importText').value = '';
+  $('#importFile').value = ''; $('#importText').value = ''; $('#im-boys').value = ''; $('#im-girls').value = '';
   $('#importBox').open = false;
   const noGender = list.filter(s => !s.gender).length;
   toast(`已匯入 ${list.length} 位學生。` + (noGender ? `其中 ${noGender} 位沒有性別，請補上。` : ''));
@@ -1687,7 +1717,7 @@ function renderStudents() {
   tb.innerHTML = `<thead><tr><th>座號</th><th>姓名</th><th>性別</th><th>學生手機</th><th>緊急聯絡人 1</th><th>緊急聯絡人 2</th><th>飲食</th><th>過敏／醫療</th><th>備註</th><th class="no-print"></th></tr></thead><tbody>` +
     sortedStudents().map(s => `<tr class="${gcls(s.gender)}">
       <td class="num nowrap">${esc(s.no)}</td><td class="name nowrap">${esc(s.name)}</td>
-      <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td>
+      <td><button class="sex sex-btn ${gcls(s.gender)}" type="button" data-act="toggle-gender" data-sid="${s.id}" title="點一下切換男／女" aria-label="${esc(s.name)} 的性別：${gtxt(s.gender)}，點一下切換">${gtxt(s.gender)}</button></td>
       <td class="num nowrap">${esc(s.phone)}</td>
       <td class="nowrap">${esc(s.ec1Name)}${s.ec1Rel ? `<span class="sub">（${esc(s.ec1Rel)}）</span>` : ''}<span class="num"> ${esc(s.ec1Phone)}</span></td>
       <td class="nowrap">${esc(s.ec2Name)}${s.ec2Rel ? `<span class="sub">（${esc(s.ec2Rel)}）</span>` : ''}<span class="num"> ${esc(s.ec2Phone)}</span></td>
@@ -1995,6 +2025,14 @@ document.addEventListener('click', async e => {
       case 'print-all': doPrint(true); break;
       case 'add-student': openStudent(null); break;
       case 'edit-student': openStudent(a.dataset.sid); break;
+      case 'toggle-gender': {
+        const s = stu(a.dataset.sid); if (!s) break;
+        const before = memberOf('rooms')[s.id];
+        setGender(s, s.gender === 'M' ? 'F' : 'M');
+        save(); renderAll();
+        toast(`${s.name} 改為${gtxt(s.gender)}生。` + (before && !memberOf('rooms')[s.id] ? '已從原本的房間移出，請重新分房。' : ''));
+        break;
+      }
       case 'dlg-cancel': $('#stuDlg').close(); break;
       case 'del-student': {
         const s = stu(a.dataset.sid);
