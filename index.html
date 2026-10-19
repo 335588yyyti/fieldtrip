@@ -234,7 +234,13 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 }
 .seat .sl { font-family: var(--font-mono); font-size: .66rem; color: var(--muted); line-height: 1; }
 .seat .chip { padding: 2px 5px; font-size: .82rem; gap: 3px; justify-content: center; white-space: nowrap; overflow: hidden; }
-.seat .chip .no { display: none; }
+.seat .chip .no { font-size: .7rem; }
+.bus-door {
+  grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center;
+  font-size: .75rem; font-weight: 700; letter-spacing: .06em; color: var(--warn);
+  border-block: 1px dashed var(--warn); padding: 1px 2px; margin-block: 2px;
+}
+.bus-door span:empty { visibility: hidden; }
 .seat.reserved { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--line) 6px 7px); }
 .seat.reserved .rv { font-size: .78rem; color: var(--muted); text-align: center; font-weight: 700; }
 .seat.empty .rv { font-size: .72rem; color: var(--muted); text-align: center; opacity: .6; }
@@ -580,7 +586,7 @@ const BOARDS = {
     extraLabel:'過敏／醫療', extra: s => s.medical,
     help:'男女分房，不同性別的學生不能放進同一間。每間人數可調整，房號可以直接改名稱。' },
   bus: { label:'遊覽車座位', unit:'車', hasCap:false, gender:false, leader:false, seats:true,
-    help:'座位圖上方是車頭（左邊司機、右邊前門）。先點學生再點座位就能入座，點已有人的座位會互換。沒選學生時點空位，可以標成「老師／保留」。' },
+    help:'座位圖上方是車頭（左邊司機、右邊前門），安全門在左側、後門在右側，位置可在上方調整（填 0 不顯示）。先點學生再點座位就能入座，點已有人的座位會互換。沒選學生時點空位，可以標成「老師／保留」。' },
 };
 /* 各分組頁要註明的特殊需求：素食與食物過敏放用餐，暈車放遊覽車，醫療狀況放活動與房間 */
 const FOOD_RE = /過敏|不吃|忌|乳糖|麩質|素/;
@@ -608,7 +614,7 @@ function blankState() {
     activity: { n: 6, groups: [] },
     dining: { cap: 10, groups: [] },
     rooms: { cap: 4, groups: [] },
-    bus: { n: 1, rows: 10, back5: true, sameGender: true, groups: [] },
+    bus: { n: 1, rows: 10, back5: true, sameGender: true, safeDoor: 6, backDoor: 8, groups: [] },
     itinerary: [],
     isSample: false,
   };
@@ -1324,8 +1330,13 @@ function renderBus() {
       const body = s ? chipHTML('bus', s, null) : `<span class="rv">${v === '#R' ? '保留' : '空位'}</span>`;
       return `<div class="seat drop${cls}${id.endsWith('M') ? ' aisle' : ''}" data-k="bus" data-gid="${b.id}" data-seat="${id}" title="${v === '#R' ? '保留座位（點一下取消）' : s ? '' : '空位（沒選學生時點一下可設為保留）'}"><span class="sl">${id}</span>${body}</div>`;
     };
-    const grid = busLayout().map(row => row.length === 5 ? row.map(seat).join('')
-      : seat(row[0]) + seat(row[1]) + '<div></div>' + seat(row[2]) + seat(row[3])).join('');
+    // 安全門在左側、後門在右側，畫在指定排的前面
+    const door = r => {
+      const safe = Number(B.safeDoor) === r, back = Number(B.backDoor) === r;
+      return safe || back ? `<div class="bus-door"><span>${safe ? '◀ 安全門' : ''}</span><span>${back ? '後門 ▶' : ''}</span></div>` : '';
+    };
+    const grid = busLayout().map((row, i) => door(i + 1) + (row.length === 5 ? row.map(seat).join('')
+      : seat(row[0]) + seat(row[1]) + '<div></div>' + seat(row[2]) + seat(row[3]))).join('');
     return `<div class="card bus-card" data-gid="${b.id}">
       <div class="card-h">
         <input type="text" class="gname" id="gname-${b.id}" data-gname="bus:${b.id}" value="${esc(b.name)}" aria-label="車名">
@@ -1341,6 +1352,8 @@ function renderBus() {
     <div class="toolbar">
       <label class="inline">車數 <input type="number" min="1" max="20" id="bus-n" data-board-set="bus:n" value="${esc(B.n)}"></label>
       <label class="inline">每車 <input type="number" min="2" max="20" id="bus-rows" data-board-set="bus:rows" value="${esc(B.rows)}"> 排</label>
+      <label class="inline" title="安全門在車身左側；填 0 表示不顯示">安全門 第 <input type="number" min="0" max="20" id="bus-safe" data-bus-num="safeDoor" value="${esc(B.safeDoor)}"> 排前</label>
+      <label class="inline" title="後門在車身右側；填 0 表示不顯示">後門 第 <input type="number" min="0" max="20" id="bus-backdoor" data-bus-num="backDoor" value="${esc(B.backDoor)}"> 排前</label>
       <label class="inline"><input type="checkbox" id="bus-back5" data-bus-opt="back5"${B.back5 ? ' checked' : ''}> 最後一排 5 人座</label>
       <label class="inline"><input type="checkbox" id="bus-same" data-bus-opt="sameGender"${B.sameGender ? ' checked' : ''}> 同性別坐一起</label>
       <label class="inline">順序 <select id="bus-mode"><option value="no">依座號</option><option value="activity">依活動組</option></select></label>
@@ -1617,6 +1630,7 @@ document.addEventListener('change', e => {
     if (k === 'bus' && prop === 'n') setBusCount(v); else state[k][prop] = v;
     save(); renderAll(); return;
   }
+  if (el.dataset.busNum) { state.bus[el.dataset.busNum] = Math.max(0, parseInt(el.value, 10) || 0); save(); renderAll(); return; }
   if (el.dataset.busOpt) { state.bus[el.dataset.busOpt] = el.checked; save(); renderAll(); return; }
   if (el.dataset.itin) { renderAll(); return; }
   if (el.id === 'itinFile' && el.files[0]) {
