@@ -593,7 +593,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       <div class="import-body">
         <ol>
           <li>可直接選 Excel 檔（.xlsx）或 CSV，也可以從 Excel 選取整個表格後複製，貼到下方框框。</li>
-          <li>第一列可以放欄位名稱，系統會自動辨認：<code>座號</code> <code>姓名</code> <code>性別</code> <code>學生手機</code> <code>緊急聯絡人1</code> <code>關係1</code> <code>電話1</code> <code>緊急聯絡人2</code> <code>關係2</code> <code>電話2</code> <code>飲食</code> <code>過敏/醫療</code> <code>備註</code>。沒有的欄位直接不放即可。<b>沒有標題列也可以</b>，系統會依內容判斷（座號、姓名、性別、電話、家長姓名、關係），匯入前會先讓你確認。</li>
+          <li>第一列可以放欄位名稱，系統會自動辨認：<code>座號</code> <code>姓名</code> <code>性別</code> <code>學生手機</code> <code>緊急聯絡人1</code> <code>關係1</code> <code>電話1</code> <code>緊急聯絡人2</code> <code>關係2</code> <code>電話2</code> <code>飲食</code> <code>過敏/醫療</code> <code>備註</code>。沒有的欄位直接不放即可，也可以<b>分好幾次匯入</b>（例如先匯入名單、再匯入家長電話），選「合併到目前名單」就會依座號自動合併。<b>沒有標題列也可以</b>，系統會依內容判斷（座號、姓名、性別、電話、家長姓名、關係），匯入前會先讓你確認。</li>
           <li>性別填「男／女」即可。Excel 把手機開頭的 0 吃掉也沒關係，匯入時會自動補回。</li>
         </ol>
         <div class="row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
@@ -608,6 +608,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
           <label class="inline"><input type="radio" name="importMode" id="im-replace" value="replace" checked> 取代目前名單（分組會清空）</label>
+          <label class="inline" title="依座號（沒有座號時依姓名）找到同一位學生，只補上或更新這次有填的欄位，分組不會清空"><input type="radio" name="importMode" id="im-merge" value="merge"> 合併到目前名單（依座號補上資料）</label>
           <label class="inline"><input type="radio" name="importMode" id="im-append" value="append"> 加到目前名單後面</label>
           <span class="sep" style="flex:1"></span>
           <button class="btn primary" type="button" data-act="do-import">匯入</button>
@@ -1398,7 +1399,7 @@ function rowsToStudents(rows) {
     if (f && idx[f] === undefined) idx[f] = i;
   });
   let body = rows;
-  if (Object.keys(idx).length >= 2 && idx.name !== undefined) body = rows.slice(1);
+  if (Object.keys(idx).length >= 2 && (idx.name !== undefined || idx.no !== undefined)) body = rows.slice(1);
   else Object.assign(idx, guessColumns(rows));   // 沒有標題列：依內容判斷每一欄
   const width = Math.max(...rows.map(r => r.length));
   const cols = Array.from({ length: width }, (_, i) => { const f = Object.keys(idx).find(k => idx[k] === i); return f ? LABELS[f] : '（略過）'; });
@@ -1408,8 +1409,14 @@ function rowsToStudents(rows) {
     s.gender = parseGender(s.gender);
     s.phone = fixPhone(s.phone); s.ec1Phone = fixPhone(s.ec1Phone); s.ec2Phone = fixPhone(s.ec2Phone);
     return s;
-  }).filter(s => s.name);
+  }).filter(s => s.name || s.no);
   return { list, cols };
+}
+// 合併時找同一位學生：先比座號，沒有座號再比姓名
+function findSameStudent(s) {
+  const no = String(s.no || '').trim();
+  if (no) { const m = state.students.find(x => String(x.no).trim() === no || (parseFloat(x.no) === parseFloat(no) && !isNaN(parseFloat(no)))); if (m) return m; }
+  return s.name ? state.students.find(x => x.name === s.name) || null : null;
 }
 // 依每一欄的內容猜欄位：座號、姓名、性別、電話、關係；學生後面的「姓名＋電話」視為緊急聯絡人
 const REL_WORDS = ['父', '母', '父親', '母親', '爸爸', '媽媽', '爸', '媽', '祖父', '祖母', '外公', '外婆', '爺爺', '奶奶', '阿公', '阿嬤', '阿媽',
@@ -1422,6 +1429,7 @@ function cellType(v) {
   const digits = v.replace(/[^\d]/g, '');
   if (/^[+\d\-\s()#轉]+$/.test(v) && digits.length >= 8 && digits.length <= 12) return 'phone';
   if (REL_WORDS.includes(v)) return 'rel';
+  if (/素|葷|不吃|過敏|氣喘|藥|病|暈|癲癇|注意/.test(v)) return 'text';
   if (/^[\u3400-\u9fff][\u3400-\u9fff·．‧]{1,5}$/.test(v)) return 'name';
   return 'text';
 }
@@ -1498,30 +1506,43 @@ async function doImport() {
   }
   const { list, cols } = rowsToStudents(rows);
   if (!list.length) { toast('沒有讀到任何學生，請確認有「姓名」這一欄。'); return; }
-  const replace = $('#im-replace').checked;
+  const replace = $('#im-replace').checked, merge = $('#im-merge').checked && state.students.length && !state.isSample;
   // 依座號範圍設定性別
   const boys = parseNoRanges($('#im-boys').value), girls = parseNoRanges($('#im-girls').value);
   list.forEach(s => { const n = parseFloat(s.no); if (boys.has(n)) s.gender = 'M'; else if (girls.has(n)) s.gender = 'F'; });
   const nM = list.filter(s => s.gender === 'M').length, nF = list.filter(s => s.gender === 'F').length;
+  // 合併：先找出每一筆對應到哪位學生
+  const pairs = merge ? list.map(s => [s, findSameStudent(s)]) : [];
+  const nUpd = pairs.filter(x => x[1]).length, nNew = pairs.filter(x => !x[1] && x[0].name).length, nSkip = pairs.length - nUpd - nNew;
+  if (!merge) list.splice(0, list.length, ...list.filter(s => s.name));
+  if (!list.length) { toast('沒有讀到任何學生，請確認有「姓名」這一欄。'); return; }
   const s0 = list[0];
   const contact = (n, p) => [n, p].filter(Boolean).join(' ');
   const msg = [`讀到 ${list.length} 位學生。`,
     `欄位判斷：${cols.join('｜')}`,
-    `第一位：${s0.no} ${s0.name}${s0.gender ? `（${gtxt(s0.gender)}）` : ''}${s0.phone ? `，手機 ${s0.phone}` : ''}` +
+    `第一位：${s0.no} ${s0.name || (merge ? findSameStudent(s0)?.name || '（找不到對應學生）' : '')}${s0.gender ? `（${gtxt(s0.gender)}）` : ''}${s0.phone ? `，手機 ${s0.phone}` : ''}` +
       `${contact(s0.ec1Name, s0.ec1Phone) ? `，聯絡人 ${contact(s0.ec1Name, s0.ec1Phone)}` : ''}${contact(s0.ec2Name, s0.ec2Phone) ? `、${contact(s0.ec2Name, s0.ec2Phone)}` : ''}`,
-    `性別：男 ${nM} 人、女 ${nF} 人${list.length - nM - nF ? `、未填 ${list.length - nM - nF} 人` : ''}`,
+    merge ? (nM + nF ? `性別：男 ${nM} 人、女 ${nF} 人` : '') : `性別：男 ${nM} 人、女 ${nF} 人${list.length - nM - nF ? `、未填 ${list.length - nM - nF} 人` : ''}`,
+    merge ? `合併：更新 ${nUpd} 位學生的資料${nNew ? `、新增 ${nNew} 位` : ''}${nSkip ? `、${nSkip} 筆找不到對應的學生（會略過）` : ''}。原本的資料和分組都會保留，只補上這次有填的欄位。` : '',
     replace && state.students.length && !state.isSample ? `會取代目前的 ${state.students.length} 位學生，並清空所有分組。` : '',
     '判斷正確嗎？'].filter(Boolean).join('\n');
   if (!(await confirmBox(msg, '正確，匯入', '取消'))) return;
-  if (replace || state.isSample) {
+  if (merge) {
+    pairs.forEach(([s, old]) => {
+      if (old) {
+        FIELDS.forEach(f => { if (f !== 'gender' && s[f]) old[f] = s[f]; });
+        if (s.gender && s.gender !== old.gender) setGender(old, s.gender);
+      } else if (s.name) state.students.push(s);
+    });
+  } else if (replace || state.isSample) {
     state.students = list;
     for (const k of Object.keys(BOARDS)) state[k].groups = [];
   } else state.students.push(...list);
   state.isSample = false;
   $('#importFile').value = ''; $('#importText').value = ''; $('#im-boys').value = ''; $('#im-girls').value = '';
   $('#importBox').open = false;
-  const noGender = list.filter(s => !s.gender).length;
-  toast(`已匯入 ${list.length} 位學生。` + (noGender ? `其中 ${noGender} 位沒有性別，請補上。` : ''));
+  const noGender = state.students.filter(s => !s.gender).length;
+  toast((merge ? `已合併：更新 ${nUpd} 位${nNew ? `、新增 ${nNew} 位` : ''}。` : `已匯入 ${list.length} 位學生。`) + (noGender ? `有 ${noGender} 位沒有性別，可在名單上點性別欄補上。` : ''));
   save(); renderAll();
 }
 
@@ -2041,7 +2062,7 @@ document.addEventListener('click', async e => {
         }
         break;
       }
-      case 'open-import': $('#importBox').open = true; $('#importBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
+      case 'open-import': $(state.students.length && !state.isSample ? '#im-merge' : '#im-replace').checked = true; $('#importBox').open = true; $('#importBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
       case 'do-import': doImport(); break;
       case 'template': exportTemplate(); break;
       case 'export-csv': exportCsv(); break;
