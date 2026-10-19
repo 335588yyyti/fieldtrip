@@ -72,7 +72,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   background: var(--surface); border-bottom: 1px solid var(--line);
 }
 .top-inner, main {
-  max-width: 1720px; margin: 0 auto;
+  max-width: 1280px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -222,34 +222,35 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 .board-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
 
 /* ---------- 遊覽車座位 ---------- */
-.buses { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 14px; }
+.buses { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 14px; }
+.buses > .bus-card { flex: 1 1 420px; max-width: 540px; min-width: 0; }
 .bus-grid {
   display: grid; grid-template-columns: 1fr 1fr .45fr 1fr 1fr; gap: 5px; padding: 10px;
   margin: 10px; border: 2px solid var(--line); border-radius: 18px 18px 8px 8px;
 }
-.bus-front { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); font-weight: 700; letter-spacing: .08em; padding: 0 4px 4px; border-bottom: 1px dashed var(--line); margin-bottom: 2px; }
+.bus-front { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: .9rem; color: var(--muted); font-weight: 700; letter-spacing: .08em; padding: 0 4px 4px; border-bottom: 1px dashed var(--line); margin-bottom: 2px; }
 .seat {
-  min-height: 38px; border: 1px solid var(--line); border-radius: 6px; padding: 11px 4px 3px;
+  min-height: 50px; border: 1px solid var(--line); border-radius: 6px; padding: 14px 4px 3px;
   display: flex; flex-direction: column; gap: 2px; min-width: 0; cursor: pointer; background: var(--paper);
 }
-.seat .sl { font-family: var(--font-mono); font-size: .64rem; color: var(--muted); line-height: 1; position: absolute; top: 2px; left: 4px; }
-.seat .chip { padding: 2px 5px; font-size: .82rem; gap: 3px; justify-content: center; white-space: nowrap; overflow: hidden; }
-.seat .chip .no { font-size: .7rem; }
+.seat .sl { font-family: var(--font-mono); font-size: .74rem; color: var(--muted); line-height: 1; position: absolute; top: 2px; left: 4px; }
+.seat .chip { padding: 2px 5px; font-size: 1.05rem; font-weight: 700; gap: 3px; justify-content: center; white-space: nowrap; overflow: hidden; }
+.seat .chip .no { font-size: .95rem; opacity: 1; }
 .door-cell {
-  grid-column: span 2; display: grid; place-items: center; min-height: 38px;
-  border: 1.5px dashed var(--muted); border-radius: 6px; color: var(--muted); font-weight: 700; font-size: .85rem; letter-spacing: .1em;
+  grid-column: span 2; display: grid; place-items: center; min-height: 50px;
+  border: 1.5px dashed var(--muted); border-radius: 6px; color: var(--muted); font-weight: 700; font-size: 1.05rem; letter-spacing: .1em;
 }
 .back-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: inherit; }
 .back-row .seat.aisle { grid-column: auto; }
-.row-no { display: grid; place-items: center; font-family: var(--font-mono); font-size: .78rem; color: var(--muted); }
+.row-no { display: grid; place-items: center; font-family: var(--font-mono); font-size: .95rem; color: var(--muted); }
 .seat { position: relative; }
-.seat .rv-in { width: 100%; font-size: .8rem; text-align: center; padding: 1px 2px; border-color: transparent; background: transparent; font-weight: 700; }
+.seat .rv-in { width: 100%; font-size: 1rem; text-align: center; padding: 1px 2px; border-color: transparent; background: transparent; font-weight: 700; }
 .seat .rv-in:hover, .seat .rv-in:focus { border-color: var(--line); background: var(--surface); }
 .seat .rv-x { position: absolute; top: 0; right: 2px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: .9rem; line-height: 1; padding: 2px; }
 .seat .rv-x:hover { color: var(--warn); }
 .seat.reserved { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--line) 6px 7px); }
-.seat.reserved .rv { font-size: .78rem; color: var(--muted); text-align: center; font-weight: 700; }
-.seat.empty .rv { font-size: .72rem; color: var(--muted); text-align: center; opacity: .6; }
+.seat.reserved .rv { font-size: 1rem; color: var(--muted); text-align: center; font-weight: 700; }
+.seat.empty .rv { font-size: .9rem; color: var(--muted); text-align: center; opacity: .6; }
 .seat.drop-hot { outline: 2px solid var(--accent); }
 body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent); }
 .seat.aisle { grid-column: 3; }
@@ -352,6 +353,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   #itinPrint td.day { font-weight: 700; white-space: nowrap; }
   #itinPrint td.time { white-space: nowrap; font-family: var(--font-mono); }
   .buses { display: block; }
+  .buses > .bus-card { max-width: none; }
   .bus-card + .bus-card { break-before: page; }
   .bus-card { border: 0; }
   .bus-grid { gap: 4px; border-color: #555; }
