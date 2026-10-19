@@ -351,6 +351,10 @@ body.present #sec-bus .row-no, body.present #sec-bus .door-cell { font-size: 1.1
 /* ---------- 設定頁 ---------- */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; }
 .form-grid.trip { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.date-field { grid-column: span 2; }
+.date-pair { display: flex; align-items: center; gap: 6px; }
+.date-pair input { flex: 1 1 0; min-width: 0; }
+@media (max-width: 520px) { .date-field { grid-column: auto; } }
 .panel-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 10px; margin-bottom: 10px; align-items: start; }
 .panel-pair > .panel { margin-bottom: 0; }
 .field { display: grid; gap: 4px; min-width: 0; }
@@ -519,7 +523,13 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       <h3>基本資訊<span class="hint">會出現在每一張列印頁的標題列</span></h3>
       <div class="form-grid trip">
         <label class="field"><span>活動名稱</span><input type="text" id="t-title" data-trip="title" placeholder="例：六年級畢業旅行"></label>
-        <label class="field"><span>日期</span><input type="text" id="t-date" data-trip="date" placeholder="例：2026/11/12–11/14"></label>
+        <div class="field date-field"><span>日期（出發 ～ 回程）</span>
+          <div class="date-pair">
+            <input type="date" id="t-d1" aria-label="出發日">
+            <span aria-hidden="true">～</span>
+            <input type="date" id="t-d2" aria-label="回程日（一日遊可不填）">
+          </div>
+        </div>
         <label class="field"><span>地點</span><input type="text" id="t-place" data-trip="place" placeholder="例：六福村、台中科博館"></label>
         <label class="field"><span>學校</span><input type="text" id="t-school" data-trip="school"></label>
         <label class="field"><span>班級</span><input type="text" id="t-cls" data-trip="cls" placeholder="例：六年三班"></label>
@@ -816,7 +826,7 @@ function normalizeState(s) {
   const b = blankState();
   if (!s || typeof s !== 'object' || !Array.isArray(s.students)) throw new Error('格式不符');
   return {
-    trip: Object.assign(b.trip, s.trip || {}),
+    trip: withDates(Object.assign(b.trip, s.trip || {})),
     students: s.students.map(x => Object.assign({ id: uid() }, x)),
     activity: Object.assign(b.activity, s.activity || {}),
     dining: Object.assign(b.dining, s.dining || {}),
@@ -845,6 +855,29 @@ function persist(changed) {
   }
 }
 const save = () => persist(true);
+
+/* ---------- 日期 ---------- */
+// 出發／回程日（yyyy-mm-dd）→ 顯示用文字，例如 2027/1/11（一）–1/13（三）
+const WEEK = '日一二三四五六';
+function fmtTripDate(a, b) {
+  if (!a) return '';
+  const d = s => { const [y, m, dd] = s.split('-').map(Number); return { y, m, dd, w: WEEK[new Date(y, m - 1, dd).getDay()] }; };
+  const x = d(a);
+  const first = `${x.y}/${x.m}/${x.dd}（${x.w}）`;
+  if (!b || b === a) return first;
+  const z = d(b);
+  return `${first}–${z.y !== x.y ? z.y + '/' : ''}${z.m}/${z.dd}（${z.w}）`;
+}
+// 舊資料只有文字日期時，盡量讀出出發與回程日
+function withDates(t) {
+  if (t.dateStart || !t.date) return t;
+  const m = String(t.date).match(/(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?(?:\s*(?:（.）)?\s*[–\-~～至到]\s*(?:(\d{4})[\/\-.年])?(?:(\d{1,2})[\/\-.月])?(\d{1,2})日?)?/);
+  if (!m) return t;
+  const iso = (y, mo, d) => `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  t.dateStart = iso(m[1], m[2], m[3]);
+  if (m[6]) t.dateEnd = iso(m[4] || m[1], m[5] || m[2], m[6]);
+  return t;
+}
 
 /* ---------- 班級 ---------- */
 function resetUi() { ui.sel = null; ui.lastAuto = {}; ui.seatEdit = null; }
@@ -1713,6 +1746,7 @@ function renderHeader() {
   document.querySelectorAll('[data-trip]').forEach(el => {
     if (document.activeElement !== el) el.value = t[el.dataset.trip] ?? '';
   });
+  $('#t-d1').value = t.dateStart || ''; $('#t-d2').value = t.dateEnd || ''; $('#t-d2').min = t.dateStart || '';
   // 標題輸入框依文字實際寬度伸縮
   const bt = $('#brandTitle');
   bt.style.width = '1px';
@@ -2292,6 +2326,15 @@ document.addEventListener('change', e => {
     if (g) { g.leaderId = el.value; save(); renderAll(); }
     return;
   }
+  if (el.id === 't-d1' || el.id === 't-d2') {
+    const t = state.trip;
+    t.dateStart = $('#t-d1').value; t.dateEnd = $('#t-d2').value;
+    if (t.dateStart && t.dateEnd && t.dateEnd < t.dateStart) t.dateEnd = t.dateStart;
+    if (!t.dateStart) t.dateEnd = '';
+    t.date = fmtTripDate(t.dateStart, t.dateEnd);
+    save(); renderAll();
+    return;
+  }
   if (el.id === 'projSel') {
     const v = el.value; el.value = state.pid;
     if (v === '__new') newProject(); else switchProject(v);
@@ -2313,7 +2356,7 @@ document.addEventListener('change', e => {
 function sampleState() {
   const s = blankState();
   s.isSample = true;
-  Object.assign(s.trip, { title: '六年級校外教學', date: '2026/11/12–11/13', place: '六福村主題樂園、台中科博館', cls: '六年三班',
+  Object.assign(s.trip, { title: '六年級校外教學', dateStart: '2026-11-12', dateEnd: '2026-11-13', date: fmtTripDate('2026-11-12', '2026-11-13'), place: '六福村主題樂園、台中科博館', cls: '六年三班',
     school: '範例國小' });
   s.cards.note = '帶隊老師 林老師 0900-000-000｜走散時到遊覽車旁集合';
   s.itinerary = parseItinerary([
