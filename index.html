@@ -223,8 +223,6 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 
 /* ---------- 遊覽車座位 ---------- */
 .buses { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
-.bus-fields { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 8px 10px 0; font-size: .85rem; color: var(--muted); }
-.bus-fields input { width: 9em; }
 .bus-grid {
   display: grid; grid-template-columns: 1fr 1fr .45fr 1fr 1fr; gap: 5px; padding: 10px;
   margin: 10px; border: 2px solid var(--line); border-radius: 18px 18px 8px 8px;
@@ -339,7 +337,6 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   .buses { display: block; }
   .bus-card + .bus-card { break-before: page; }
   .bus-card { border: 0; }
-  .bus-fields input { display: none; }
   .bus-grid { gap: 4px; border-color: #555; }
   .seat { min-height: 15mm; background: #fff; border-color: #777; }
   .seat .chip { font-size: 11pt; border-width: 1px; }
@@ -830,7 +827,7 @@ function busLayout() {
   return rows;
 }
 const busCap = b => busLayout().flat().filter(x => b.seats[x] !== '#R').length;
-function newBus(i) { return { id: uid(), name: `${i} 號車`, teacher: '', driver: '', seats: { '1A': '#R', '1B': '#R' } }; }
+function newBus(i) { return { id: uid(), name: `${i} 號車`, seats: { '1A': '#R', '1B': '#R' } }; }
 function seatOf(sid) {
   for (const b of state.bus.groups) for (const [seat, v] of Object.entries(b.seats)) if (v === sid) return { b, seat };
   return null;
@@ -1336,10 +1333,6 @@ function renderBus() {
         <span class="count">${mem.length}/${busCap(b)} 人</span>
         <button class="btn sm ghost" type="button" data-act="del-group" data-k="bus" data-gid="${b.id}" title="刪除這台車（學生回到未分組）" aria-label="刪除 ${esc(b.name)}">✕</button>
       </div>
-      <div class="bus-fields">
-        <label class="inline">隨車老師 <input type="text" id="bt-${b.id}" data-busf="${b.id}:teacher" value="${esc(b.teacher)}"><span class="print-only">${esc(b.teacher)}</span></label>
-        <label class="inline">司機／電話 <input type="text" id="bd-${b.id}" data-busf="${b.id}:driver" value="${esc(b.driver)}"><span class="print-only">${esc(b.driver)}</span></label>
-      </div>
       <div class="bus-grid"><div class="bus-front"><span>司機</span><span>車頭</span><span>前門</span></div>${grid}</div>
       ${notesHTML('bus', mem)}
     </div>`;
@@ -1608,11 +1601,7 @@ document.addEventListener('input', e => {
     renderItinPreview();
     return;
   }
-  if (el.dataset.busf) {
-    const [gid, f] = el.dataset.busf.split(':');
-    const b = state.bus.groups.find(x => x.id === gid); if (b) { b[f] = el.value; save(); }
-    return;
-  }
+
   if (el.dataset.gname) {
     const [k, gid] = el.dataset.gname.split(':');
     const g = state[k].groups.find(x => x.id === gid); if (g) { g.name = el.value; save(); }
@@ -1629,7 +1618,7 @@ document.addEventListener('change', e => {
     save(); renderAll(); return;
   }
   if (el.dataset.busOpt) { state.bus[el.dataset.busOpt] = el.checked; save(); renderAll(); return; }
-  if (el.dataset.busf || el.dataset.itin) { renderAll(); return; }
+  if (el.dataset.itin) { renderAll(); return; }
   if (el.id === 'itinFile' && el.files[0]) {
     const f = el.files[0]; el.value = '';
     readImportFile(f).then(openItinImport).catch(err => toast(`${err.message}。沒有網路時請改用 CSV 或直接貼上。`));
@@ -1691,7 +1680,6 @@ function sampleState() {
   }
   state = s;
   autoAssign('activity', 'no'); autoAssign('dining', 'no'); autoAssign('rooms', 'no'); autoAssign('bus', 'no');
-  Object.assign(s.bus.groups[0], { teacher: '林老師', driver: '張先生 0900-000-003' });
   s.activity.groups.forEach(g => { g.leaderId = g.members[0]; });
   return s;
 }
