@@ -59,7 +59,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--paper); color: var(--ink);
-  font: 15px/1.6 var(--font-body);
+  font: 17px/1.5 var(--font-body);
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.3; }
@@ -72,11 +72,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   background: var(--surface); border-bottom: 1px solid var(--line);
 }
 .top-inner, main {
-  max-width: 1240px; margin: 0 auto;
+  max-width: 1720px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-block: 12px 6px; }
+.top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding-block: 8px 2px; }
 .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 260px; }
 .brand { flex-wrap: wrap; row-gap: 0; }
 .brand h1 { font-size: 1.25rem; font-weight: 900; letter-spacing: .02em; flex: 0 0 auto; max-width: 100%; }
@@ -123,22 +123,22 @@ textarea { width: 100%; resize: vertical; }
 label.inline { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 
 /* ---------- 頁面 ---------- */
-main { padding-block: 20px 60px; }
+main { padding-block: 12px 32px; }
 .section { display: none; }
 .section.active { display: block; }
-.print-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 14px; }
+.print-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 8px; }
 .print-head h2 { font-size: 1.45rem; font-weight: 900; }
 .print-head p { margin: 0; color: var(--muted); font-size: .9rem; }
 .toolbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
   padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .toolbar .sep { flex: 1 1 0; }
-.hint { color: var(--muted); font-size: .85rem; }
+.hint { color: var(--muted); font-size: .88rem; }
 .notice {
   display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
-  padding: 10px 14px; border-radius: var(--r); background: var(--warn-bg); color: var(--warn); margin-bottom: 14px; font-weight: 500;
+  padding: 10px 14px; border-radius: var(--r); background: var(--warn-bg); color: var(--warn); margin-bottom: 10px; font-weight: 500;
 }
 .notice .btn { color: var(--ink); }
 .print-only { display: none; }
@@ -166,7 +166,7 @@ main { padding-block: 20px 60px; }
 .tbl .sub { color: var(--muted); font-size: .82rem; }
 .tbl .flag { color: var(--warn); font-weight: 500; }
 
-.stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .stat {
   display: flex; gap: 8px; align-items: baseline; padding: 6px 12px; border-radius: var(--r);
   background: var(--surface); border: 1px solid var(--line); font-size: .88rem;
@@ -176,7 +176,7 @@ main { padding-block: 20px 60px; }
 .stat.done b { color: var(--ok); }
 
 /* ---------- 匯入 ---------- */
-details.import { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 14px; }
+details.import { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 10px; }
 details.import summary { cursor: pointer; padding: 10px 14px; font-weight: 700; }
 .import-body { display: grid; gap: 12px; padding: 0 14px 14px; }
 .import-body ol { margin: 0; padding-left: 1.3em; color: var(--muted); font-size: .9rem; }
@@ -222,21 +222,21 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 .board-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
 
 /* ---------- 遊覽車座位 ---------- */
-.buses { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+.buses { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 14px; }
 .bus-grid {
   display: grid; grid-template-columns: 1fr 1fr .45fr 1fr 1fr; gap: 5px; padding: 10px;
   margin: 10px; border: 2px solid var(--line); border-radius: 18px 18px 8px 8px;
 }
 .bus-front { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); font-weight: 700; letter-spacing: .08em; padding: 0 4px 4px; border-bottom: 1px dashed var(--line); margin-bottom: 2px; }
 .seat {
-  min-height: 46px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px 4px;
+  min-height: 38px; border: 1px solid var(--line); border-radius: 6px; padding: 11px 4px 3px;
   display: flex; flex-direction: column; gap: 2px; min-width: 0; cursor: pointer; background: var(--paper);
 }
-.seat .sl { font-family: var(--font-mono); font-size: .66rem; color: var(--muted); line-height: 1; }
+.seat .sl { font-family: var(--font-mono); font-size: .64rem; color: var(--muted); line-height: 1; position: absolute; top: 2px; left: 4px; }
 .seat .chip { padding: 2px 5px; font-size: .82rem; gap: 3px; justify-content: center; white-space: nowrap; overflow: hidden; }
 .seat .chip .no { font-size: .7rem; }
 .door-cell {
-  grid-column: span 2; display: grid; place-items: center; min-height: 46px;
+  grid-column: span 2; display: grid; place-items: center; min-height: 38px;
   border: 1.5px dashed var(--muted); border-radius: 6px; color: var(--muted); font-weight: 700; font-size: .85rem; letter-spacing: .1em;
 }
 .back-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: inherit; }
@@ -255,12 +255,17 @@ body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%,
 .seat.aisle { grid-column: 3; }
 
 /* ---------- 設定頁 ---------- */
-.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px 16px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; }
+.form-grid.trip { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.panel-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 10px; margin-bottom: 10px; align-items: start; }
+.panel-pair > .panel { margin-bottom: 0; }
 .field { display: grid; gap: 4px; min-width: 0; }
-.field > span { font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.field > span { font-size: .85rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
 .field.wide { grid-column: 1 / -1; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin-bottom: 16px; }
-.panel h3 { font-size: 1.05rem; margin-bottom: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px 12px; margin-bottom: 10px; }
+.panel h3 { font-size: 1.1rem; margin-bottom: 6px; }
+.panel h3 .hint { font-weight: 400; margin-left: 8px; }
+.panel > p.hint { margin: 0 0 8px; }
 .panel .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .itin-edit td { padding: 3px 4px; }
 .itin-edit input { width: 100%; border-color: transparent; background: transparent; }
@@ -270,7 +275,7 @@ body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%,
 #itinDlg form { gap: 12px; }
 .itin-opt { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); }
 .itin-opt .sub { color: var(--muted); font-size: .85rem; padding-left: 1.6em; }
-.idea-list { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 70ch; }
+.idea-list { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; }
 .idea-list b { color: var(--ink); }
 
 /* ---------- 對話框與提示 ---------- */
@@ -352,7 +357,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   .bus-grid { gap: 4px; border-color: #555; }
   .bus-grid { border: 2.5px solid #222; border-radius: 10mm 10mm 6mm 6mm; padding: 5mm 4mm 4mm; gap: 2.2mm 2mm; }
   .bus-front { border: 0; justify-content: space-between; color: #555; letter-spacing: .3em; }
-  .seat { min-height: 15mm; background: #fff; border: 1.2px solid #bbb; border-radius: 2mm; }
+  .seat { min-height: 15mm; background: #fff; border: 1.2px solid #bbb; border-radius: 2mm; padding: 4mm 1mm 1mm; justify-content: center; }
   .seat .sl { font-size: 7pt; color: #444; }
   .seat.empty .rv { visibility: hidden; }
   .seat.taken { border: 2px solid #333; background: var(--g-bg); }
@@ -397,9 +402,8 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   <section class="section" id="sec-settings" data-tab="settings">
     <div class="ph"></div>
     <div class="panel no-print">
-      <h3>基本資訊</h3>
-      <p class="hint" style="margin-top:-6px">這些資訊會出現在每一張列印頁的標題列。</p>
-      <div class="form-grid">
+      <h3>基本資訊<span class="hint">會出現在每一張列印頁的標題列</span></h3>
+      <div class="form-grid trip">
         <label class="field"><span>活動名稱</span><input type="text" id="t-title" data-trip="title" placeholder="例：六年級畢業旅行"></label>
         <label class="field"><span>日期</span><input type="text" id="t-date" data-trip="date" placeholder="例：2026/11/12–11/14"></label>
         <label class="field"><span>地點</span><input type="text" id="t-place" data-trip="place" placeholder="例：六福村、台中科博館"></label>
@@ -408,7 +412,8 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       </div>
     </div>
 
-    <div class="panel no-print">
+    <div class="panel-pair no-print">
+    <div class="panel">
       <h3>資料備份</h3>
       <p class="hint">所有資料只存在這台電腦的這個瀏覽器裡，不會上傳。換電腦、清除瀏覽紀錄前，請先下載備份檔。</p>
       <div class="row">
@@ -420,7 +425,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       </div>
     </div>
 
-    <div class="panel no-print">
+    <div class="panel">
       <h3>行前還可以準備的事</h3>
       <ul class="idea-list hint">
         <li><b>特殊照護</b>：已內建總表；素食與食物過敏也會標在用餐分組，暈車標在遊覽車座位，醫療狀況標在活動與房間分組。</li>
@@ -429,6 +434,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
         <li><b>學生隨身小卡</b>：寫上組別、房號、老師電話、集合地點，掛在名牌套裡。</li>
         <li><b>行李與服裝提醒</b>：分組名單旁附上集合時間與攜帶物品，一起發給家長。</li>
       </ul>
+    </div>
     </div>
     <div class="panel itin-panel">
       <h3 class="no-print">行程表 <span class="hint" style="font-weight:400">（選填）</span></h3>
@@ -603,7 +609,7 @@ const BOARDS = {
     extraLabel:'過敏／醫療', extra: s => s.medical,
     help:'男女分房，不同性別的學生不能放進同一間。每間人數可調整，房號可以直接改名稱。' },
   bus: { label:'遊覽車座位', unit:'車', hasCap:false, gender:false, leader:false, seats:true,
-    help:'座位依實際車型由前往後編號，門的位置會佔掉該排一側的座位，可在上方調整（填 0 表示沒有）。先點學生再點座位就能入座，點已有人的座位會互換。沒選學生時點空位，可以設為保留，並輸入老師姓名。' },
+    help:'座位依實際車型由前往後編號，門的位置會佔掉該排一側的座位，可在上方調整（填 0 表示沒有）。先點學生再點座位就能入座，點已有人的座位會互換。點兩下座位上的學生可移回未入座。沒選學生時點空位，可以設為保留，並輸入老師姓名。' },
 };
 /* 各分組頁要註明的特殊需求：素食與食物過敏放用餐，暈車放遊覽車，醫療狀況放活動與房間 */
 const FOOD_RE = /過敏|不吃|忌|乳糖|麩質|素/;
@@ -1254,8 +1260,8 @@ function renderStudents() {
       <td class="num nowrap">${esc(s.no)}</td><td class="name nowrap">${esc(s.name)}</td>
       <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td>
       <td class="num nowrap">${esc(s.phone)}</td>
-      <td class="nowrap">${esc(s.ec1Name)}${s.ec1Rel ? `<span class="sub">（${esc(s.ec1Rel)}）</span>` : ''}<br><span class="num">${esc(s.ec1Phone)}</span></td>
-      <td class="nowrap">${esc(s.ec2Name)}${s.ec2Rel ? `<span class="sub">（${esc(s.ec2Rel)}）</span>` : ''}<br><span class="num">${esc(s.ec2Phone)}</span></td>
+      <td class="nowrap">${esc(s.ec1Name)}${s.ec1Rel ? `<span class="sub">（${esc(s.ec1Rel)}）</span>` : ''}<span class="num"> ${esc(s.ec1Phone)}</span></td>
+      <td class="nowrap">${esc(s.ec2Name)}${s.ec2Rel ? `<span class="sub">（${esc(s.ec2Rel)}）</span>` : ''}<span class="num"> ${esc(s.ec2Phone)}</span></td>
       <td>${esc(s.diet)}</td><td class="flag">${esc(s.medical)}</td><td>${esc(s.note)}</td>
       <td class="no-print nowrap"><button class="btn sm" type="button" data-act="edit-student" data-sid="${s.id}">編輯</button>
         <button class="btn sm ghost danger" type="button" data-act="del-student" data-sid="${s.id}" aria-label="刪除 ${esc(s.name)}">刪除</button></td></tr>`).join('') + '</tbody>';
@@ -1336,7 +1342,7 @@ function renderBoard(k) {
       <span class="sep"></span>
       <button class="btn ghost danger" type="button" data-act="clear-board" data-k="${k}">全部移回未分組</button>
     </div>
-    <p class="hint no-print" style="margin:-4px 0 12px">${cfg.help} 調整方式：把學生拖到另一${cfg.unit}；手機或平板上可以先點學生、再點要放的${cfg.unit}。</p>
+    <p class="hint no-print" style="margin:-4px 0 12px">${cfg.help} 調整方式：把學生拖到另一${cfg.unit}；手機或平板上可以先點學生、再點要放的${cfg.unit}。點兩下學生可移回未分組。</p>
     ${summary}
     ${pool.length && b.groups.length ? `<div class="notice print-only">尚有 ${pool.length} 人未分配：${pool.map(s => esc(s.name)).join('、')}</div>` : ''}
     <div class="board">
@@ -1592,6 +1598,15 @@ document.addEventListener('click', async e => {
   const chip = e.target.closest('.chip');
   if (chip) {
     const { k, sid } = chip.dataset;
+    // 點兩下：從座位／組別移回未分組（畫面每次點擊都會重畫，所以自己計算雙擊）
+    const now = Date.now(), last = ui.lastChip;
+    ui.lastChip = { k, sid, t: now };
+    if (last && last.k === k && last.sid === sid && now - last.t < 450) {
+      ui.lastChip = null;
+      if (!chip.closest('.pool')) { moveStudent(k, sid, ''); toast(`${stu(sid)?.name} 已移回未分組。`); }
+      else { ui.sel = null; renderAll(); }
+      return;
+    }
     const seat = chip.closest('.seat');
     if (seat && ui.sel && ui.sel.k === 'bus' && ui.sel.sid !== sid) {   // 已選學生時點有人的座位＝互換
       moveStudent('bus', ui.sel.sid, seat.dataset.gid, seat.dataset.seat);
