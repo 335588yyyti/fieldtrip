@@ -77,8 +77,19 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 .top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-block: 12px 6px; }
 .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 260px; }
-.brand h1 { font-size: 1.25rem; font-weight: 900; letter-spacing: .02em; }
-.brand .meta { color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand { flex-wrap: wrap; row-gap: 0; }
+.brand h1 { font-size: 1.25rem; font-weight: 900; letter-spacing: .02em; flex: 0 0 auto; max-width: 100%; }
+.brand-input {
+  font: inherit; letter-spacing: inherit; color: inherit; background: transparent; max-width: 100%;
+  border: 1px dashed transparent; border-radius: 6px; padding: 0 4px; margin-left: -5px; cursor: text;
+}
+.brand-input:hover { border-color: var(--line); }
+.brand-input:focus { border-style: solid; border-color: var(--primary); background: var(--surface); outline: none; }
+.brand .meta {
+  color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: none; border: 0; padding: 0; cursor: pointer; min-width: 0;
+}
+.brand .meta:hover { color: var(--ink); text-decoration: underline; }
 .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; margin-bottom: -1px; }
 .tabs::-webkit-scrollbar { display: none; }
@@ -331,8 +342,8 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   <div class="top-inner">
     <div class="top-row">
       <div class="brand">
-        <h1 id="brandTitle">校外教學</h1>
-        <span class="meta" id="brandMeta"></span>
+        <h1><input type="text" class="brand-input" id="brandTitle" data-trip="title" aria-label="活動名稱（點一下可修改）" title="點一下修改活動名稱" placeholder="輸入活動名稱"></h1>
+        <button class="meta" type="button" id="brandMeta" data-goto="settings" title="修改日期、地點、班級"></button>
       </div>
       <div class="top-actions">
         <button class="btn" type="button" data-act="print-one" title="只印目前這一頁">列印本頁</button>
@@ -1007,8 +1018,7 @@ function printHead(title) {
 }
 function renderHeader() {
   const t = state.trip;
-  $('#brandTitle').textContent = t.title || '校外教學';
-  $('#brandMeta').textContent = [t.date, t.place, t.cls].filter(Boolean).join('・');
+  $('#brandMeta').textContent = [t.date, t.place, t.cls].filter(Boolean).join('・') || '＋ 填寫日期、地點、班級';
   document.title = `${t.title || '校外教學'}・行前分組`;
   $('#sampleNotice').hidden = !state.isSample;
   const badges = {};
@@ -1019,6 +1029,10 @@ function renderHeader() {
   document.querySelectorAll('[data-trip]').forEach(el => {
     if (document.activeElement !== el) el.value = t[el.dataset.trip] ?? '';
   });
+  // 標題輸入框依文字實際寬度伸縮
+  const bt = $('#brandTitle');
+  bt.style.width = '1px';
+  bt.style.width = `${bt.scrollWidth + 14}px`;
 }
 function renderStudents() {
   const sec = $('#sec-students');
@@ -1269,8 +1283,8 @@ function setTab(k) {
   window.scrollTo({ top: 0 });
 }
 document.addEventListener('click', async e => {
-  const tab = e.target.closest('.tab');
-  if (tab) { setTab(tab.dataset.tab); return; }
+  const tab = e.target.closest('.tab, [data-goto]');
+  if (tab) { setTab(tab.dataset.tab || tab.dataset.goto); return; }
 
   const a = e.target.closest('[data-act]');
   if (a) {
