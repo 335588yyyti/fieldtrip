@@ -28,7 +28,7 @@
 
 ## 開啟 GitHub Pages
 
-到 GitHub 專案的 **Settings → Pages**，在 Build and deployment 選 **Deploy from a branch**，分支選 `claude/clever-turing-56ot0i`、資料夾 `/ (root)`，按 Save。約一分鐘後網址就能使用。
+到 GitHub 專案的 **Settings → Pages**，在 Build and deployment 的 **Source** 選 **GitHub Actions**。之後每次更新 `index.html`，`.github/workflows/pages.yml` 會自動把網頁發布到上面的網址。
 
 網頁本身公開，但學生資料只存在各自的瀏覽器，不會出現在網址上，也不要把真實名單 commit 進這個專案。
 
