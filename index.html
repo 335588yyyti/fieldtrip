@@ -207,6 +207,7 @@ details.import summary { cursor: pointer; padding: 10px 14px; font-weight: 700; 
 .room-tag { font-size: .78rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--g-bg); color: var(--g-ink); border: 1px solid var(--g-line); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; min-height: 64px; align-content: flex-start; flex: 1; border-radius: 0 0 var(--r) var(--r); }
 .chips.drop-hot { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+body.selecting .card { cursor: copy; }
 body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -4px; }
 .chips .empty { color: var(--muted); font-size: .82rem; align-self: center; }
 .chip {
@@ -519,7 +520,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
         </div>
       </div>
     </details>
-    <div class="table-wrap"><table class="tbl" id="studentTable"></table></div>
+    <div class="table-wrap fit"><table class="tbl" id="studentTable"></table></div>
   </section>
 
   <section class="section printable" id="sec-activity" data-tab="activity" data-board="activity"></section>
@@ -552,7 +553,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   <section class="section printable" id="sec-care" data-tab="care">
     <div class="ph"></div>
     <div class="stats" id="careStats"></div>
-    <div class="table-wrap"><table class="tbl" id="careTable"></table></div>
+    <div class="table-wrap fit"><table class="tbl" id="careTable"></table></div>
   </section>
 
   <footer class="foot no-print">資料自動儲存在這個瀏覽器中，不會上傳到任何地方。<span id="saveState"></span></footer>
@@ -658,7 +659,7 @@ const BOARDS = {
     extraLabel:'過敏／醫療', extra: s => s.medical,
     help:'男女分房，不同性別的學生不能放進同一間。每間人數可調整，房號可以直接改名稱。' },
   bus: { label:'遊覽車座位', unit:'車', hasCap:false, gender:false, leader:false, seats:true,
-    help:'座位依實際車型由前往後編號，門的位置會佔掉該排一側的座位，可在上方調整（填 0 表示沒有）。先點學生再點座位就能入座，點已有人的座位會互換。點兩下座位上的學生可移回未入座。沒選學生時點空位，可以設為保留，並輸入老師姓名。' },
+    help:'座位依實際車型由前往後編號，門的位置會佔掉該排一側的座位，可在上方調整（填 0 表示沒有）。先點學生再點座位就能入座（選好幾位會從那個座位往後依序入座），只選一位時點已有人的座位會互換。點兩下座位上的學生可移回未入座。沒選學生時點空位，可以設為保留，並輸入老師姓名。' },
 };
 /* 各分組頁要註明的特殊需求：素食與食物過敏放用餐，暈車放遊覽車，醫療狀況放活動與房間 */
 const FOOD_RE = /過敏|不吃|忌|乳糖|麩質|素/;
@@ -824,14 +825,13 @@ function newGroup(k, i, gender) {
   const names = { activity: `第 ${i} 組`, dining: `第 ${i} 桌`, rooms: `${gender === 'F' ? '女' : '男'}生 ${i} 房` };
   return { id: uid(), name: names[k], members: [], leaderId: '', cap: '', gender: gender || '' };
 }
-function moveStudent(k, sid, gid, seat) {
-  const s = stu(sid); if (!s) return;
-  if (k === 'bus') { seatStudent(sid, gid, seat); return; }
+// 把一位學生放進組別（gid 空白＝移回未分組）；回傳要提醒的訊息
+function placeOne(k, sid, gid, seat) {
+  const s = stu(sid); if (!s) return '';
+  if (k === 'bus') return seatOne(sid, gid, seat);
   const g = gid ? state[k].groups.find(x => x.id === gid) : null;
-  if (g && BOARDS[k].gender && g.gender && s.gender && g.gender !== s.gender) {
-    toast(`男女分房：${s.name} 不能放進${g.gender === 'M' ? '男生' : '女生'}房。`);
-    return;
-  }
+  if (g && BOARDS[k].gender && g.gender && s.gender && g.gender !== s.gender)
+    return `男女分房：${s.name} 不能放進${g.gender === 'M' ? '男生' : '女生'}房。`;
   state[k].groups.forEach(x => {
     x.members = x.members.filter(id => id !== sid);
     if (x.leaderId === sid) x.leaderId = '';
@@ -839,10 +839,34 @@ function moveStudent(k, sid, gid, seat) {
   if (g) {
     if (BOARDS[k].gender && !g.gender && s.gender) g.gender = s.gender;
     g.members.push(sid);
-    if (g.members.length > gcap(k, g)) toast(`${g.name} 已超過 ${gcap(k, g)} 人上限。`);
+    if (g.members.length > gcap(k, g)) return `${g.name} 已超過 ${gcap(k, g)} 人上限。`;
+  }
+  return '';
+}
+function moveStudent(k, sid, gid, seat) {
+  const msg = placeOne(k, sid, gid, seat);
+  ui.sel = null;
+  save(); renderAll();
+  if (msg) toast(msg);
+}
+// 一次移動多位已選的學生
+function moveMany(k, sids, gid, seat) {
+  if (sids.length === 1) return moveStudent(k, sids[0], gid, seat);
+  const msgs = [];
+  if (k === 'bus' && gid && seat) {
+    // 先讓選取的學生離座，再從點的座位開始往後找空位依序入座
+    sids.forEach(sid => seatOne(sid, '', ''));
+    const b = state.bus.groups.find(x => x.id === gid);
+    const order = busLayout().flat(), start = Math.max(0, order.indexOf(seat));
+    const free = order.slice(start).concat(order.slice(0, start)).filter(x => !b.seats[x]);
+    sortedStudents(sids.map(stu).filter(Boolean)).forEach((s, i) => { if (free[i]) b.seats[free[i]] = s.id; });
+    if (free.length < sids.length) msgs.push(`這台車的空位不夠，${sids.length - free.length} 人留在未入座。`);
+  } else {
+    sortedStudents(sids.map(stu).filter(Boolean)).forEach(s => { const m = placeOne(k, s.id, gid, seat); if (m) msgs.push(m); });
   }
   ui.sel = null;
   save(); renderAll();
+  toast(msgs.length ? msgs.join(' ') : `已移動 ${sids.length} 人。`);
 }
 function orderList(list, mode) { return mode === 'random' ? shuffle(list) : sortedStudents(list); }
 function autoAssign(k, mode) {
@@ -936,7 +960,7 @@ function setBusCount(n) {
   B.groups = B.groups.slice(0, n);
   B.n = n;
 }
-function seatStudent(sid, busId, seat) {
+function seatOne(sid, busId, seat) {
   const from = seatOf(sid);
   if (from) delete from.b.seats[from.seat];
   const b = busId && state.bus.groups.find(x => x.id === busId);
@@ -945,7 +969,7 @@ function seatStudent(sid, busId, seat) {
     if (occ && occ[0] !== '#' && occ !== sid && from) from.b.seats[from.seat] = occ;   // 互換座位
     b.seats[seat] = sid;
   }
-  ui.sel = null; save(); renderAll();
+  return '';
 }
 function toggleReserve(busId, seat) {
   const b = state.bus.groups.find(x => x.id === busId); if (!b) return;
@@ -1313,13 +1337,13 @@ function renderStudents() {
       <td class="num nowrap">${esc(s.phone)}</td>
       <td class="nowrap">${esc(s.ec1Name)}${s.ec1Rel ? `<span class="sub">（${esc(s.ec1Rel)}）</span>` : ''}<span class="num"> ${esc(s.ec1Phone)}</span></td>
       <td class="nowrap">${esc(s.ec2Name)}${s.ec2Rel ? `<span class="sub">（${esc(s.ec2Rel)}）</span>` : ''}<span class="num"> ${esc(s.ec2Phone)}</span></td>
-      <td>${esc(s.diet)}</td><td class="flag">${esc(s.medical)}</td><td>${esc(s.note)}</td>
+      <td class="nowrap">${esc(s.diet)}</td><td class="flag">${esc(s.medical)}</td><td>${esc(s.note)}</td>
       <td class="no-print nowrap"><button class="btn sm" type="button" data-act="edit-student" data-sid="${s.id}">編輯</button>
         <button class="btn sm ghost danger" type="button" data-act="del-student" data-sid="${s.id}" aria-label="刪除 ${esc(s.name)}">刪除</button></td></tr>`).join('') + '</tbody>';
 }
 function chipHTML(k, s, g) {
   const leader = g && g.leaderId === s.id;
-  const sel = ui.sel && ui.sel.k === k && ui.sel.sid === s.id;
+  const sel = ui.sel && ui.sel.k === k && ui.sel.sids.includes(s.id);
   const care = careFor(k, s);
   const mark = care ? `<span class="mark">${k === 'dining' && /素/.test(s.diet) ? '素' : '!'}</span>` : '';
   return `<span class="chip ${gcls(s.gender)}${sel ? ' sel' : ''}" draggable="true" tabindex="0" role="button" data-k="${k}" data-sid="${s.id}"
@@ -1360,7 +1384,7 @@ function renderBoard(k) {
       sortedStudents(mem).map(s => `<option value="${s.id}"${g.leaderId === s.id ? ' selected' : ''}>${esc(s.no)} ${esc(s.name)}</option>`).join('')}</select></label>`);
     if (cfg.leader && g.leaderId && stu(g.leaderId)) sub.push(`<span class="print-only">組長：${esc(stu(g.leaderId).name)}</span>`);
     const rows = sortedStudents(mem).map(s => `<tr><td class="num">${esc(s.no)}</td><td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span> ${g.leaderId === s.id ? '★' : ''}${esc(s.name)}</td>${k === 'activity' ? `<td class="num">${esc(s.phone)}</td>` : ''}</tr>`).join('');
-    return `<div class="card${over ? ' over' : ''}" data-gid="${g.id}">
+    return `<div class="card drop${over ? ' over' : ''}" data-k="${k}" data-gid="${g.id}">
       <div class="card-h">
         <input type="text" class="gname" id="gname-${g.id}" data-gname="${k}:${g.id}" value="${esc(g.name)}" aria-label="名稱">
         <span class="print-only" style="font-weight:900;flex:1">${esc(g.name)}</span>
@@ -1393,7 +1417,7 @@ function renderBoard(k) {
       <span class="sep"></span>
       <button class="btn ghost danger" type="button" data-act="clear-board" data-k="${k}">全部移回未分組</button>
     </div>
-    <p class="hint no-print" style="margin:-4px 0 12px">${cfg.help} 調整方式：把學生拖到另一${cfg.unit}；手機或平板上可以先點學生、再點要放的${cfg.unit}。點兩下學生可移回未分組。</p>
+    <p class="hint no-print" style="margin:-4px 0 12px">${cfg.help} 調整方式：把學生拖到另一${cfg.unit}；也可以先點學生（可連點好幾位）、再點要放的${cfg.unit}，一次移過去。點兩下學生可移回未分組。</p>
     ${summary}
     ${pool.length && b.groups.length ? `<div class="notice print-only">尚有 ${pool.length} 人未分配：${pool.map(s => esc(s.name)).join('、')}</div>` : ''}
     <div class="board">
@@ -1506,7 +1530,7 @@ function renderCare() {
   $('#careTable').innerHTML = list.length
     ? `<thead><tr><th>座號</th><th>姓名</th><th>性別</th><th>飲食</th><th>過敏／醫療</th><th>備註</th><th>活動組</th><th>用餐桌</th><th>房間</th><th>遊覽車</th><th>緊急聯絡</th></tr></thead><tbody>` +
       list.map(s => `<tr class="${gcls(s.gender)}"><td class="num">${esc(s.no)}</td><td class="name nowrap">${esc(s.name)}</td>
-        <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td><td>${esc(s.diet)}</td><td class="flag">${esc(s.medical)}</td><td>${esc(s.note)}</td>
+        <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td><td class="nowrap">${esc(s.diet)}</td><td class="flag">${esc(s.medical)}</td><td>${esc(s.note)}</td>
         <td class="nowrap">${esc(ma[s.id]?.name)}</td><td class="nowrap">${esc(md[s.id]?.name)}</td><td class="nowrap">${esc(mr[s.id]?.name)}</td><td class="nowrap">${esc(busSeatText(s.id))}</td>
         <td class="nowrap">${esc(s.ec1Name)} <span class="num">${esc(s.ec1Phone)}</span></td></tr>`).join('') + '</tbody>'
     : `<tbody><tr><td class="hint" style="padding:24px;text-align:center">沒有學生填寫飲食、過敏或備註。</td></tr></tbody>`;
@@ -1675,21 +1699,30 @@ document.addEventListener('click', async e => {
     ui.lastChip = { k, sid, t: now };
     if (last && last.k === k && last.sid === sid && now - last.t < 450) {
       ui.lastChip = null;
-      if (!chip.closest('.pool')) { moveStudent(k, sid, ''); toast(`${stu(sid)?.name} 已移回未分組。`); }
-      else { ui.sel = null; renderAll(); }
+      if (!chip.closest('.pool')) {
+        const rest = ui.sel && ui.sel.k === k ? ui.sel.sids.filter(x => x !== sid) : [];
+        moveStudent(k, sid, '');
+        if (rest.length) { ui.sel = { k, sids: rest }; renderAll(); }   // 其他已選的學生維持選取
+        toast(`${stu(sid)?.name} 已移回未分組。`);
+      }
+      else { if (ui.sel) ui.sel.sids = ui.sel.sids.filter(x => x !== sid); if (ui.sel && !ui.sel.sids.length) ui.sel = null; renderAll(); }
       return;
     }
     const seat = chip.closest('.seat');
-    if (seat && ui.sel && ui.sel.k === 'bus' && ui.sel.sid !== sid) {   // 已選學生時點有人的座位＝互換
-      moveStudent('bus', ui.sel.sid, seat.dataset.gid, seat.dataset.seat);
+    if (seat && ui.sel && ui.sel.k === 'bus' && ui.sel.sids.length === 1 && ui.sel.sids[0] !== sid) {   // 選一人時點有人的座位＝互換
+      moveStudent('bus', ui.sel.sids[0], seat.dataset.gid, seat.dataset.seat);
       return;
     }
-    ui.sel = ui.sel && ui.sel.sid === sid && ui.sel.k === k ? null : { k, sid };
+    // 點學生＝加入或取消選取，可以一次選好幾位
+    if (!ui.sel || ui.sel.k !== k) ui.sel = { k, sids: [sid] };
+    else if (ui.sel.sids.includes(sid)) { ui.sel.sids = ui.sel.sids.filter(x => x !== sid); if (!ui.sel.sids.length) ui.sel = null; }
+    else ui.sel.sids.push(sid);
     renderAll();
+    if (ui.sel && ui.sel.sids.length > 1) toast(`已選 ${ui.sel.sids.length} 人，點要放的${BOARDS[k].unit === '車' ? '座位' : BOARDS[k].unit}就會一起移過去（Esc 取消）。`);
     return;
   }
   const drop = e.target.closest('.drop');
-  if (drop && ui.sel && ui.sel.k === drop.dataset.k) { moveStudent(drop.dataset.k, ui.sel.sid, drop.dataset.gid, drop.dataset.seat); return; }
+  if (drop && ui.sel && ui.sel.k === drop.dataset.k && !e.target.closest('input,select,button')) { moveMany(drop.dataset.k, [...ui.sel.sids], drop.dataset.gid, drop.dataset.seat); return; }
   if (drop && !ui.sel && drop.dataset.seat && !e.target.closest('input')) { toggleReserve(drop.dataset.gid, drop.dataset.seat); return; }
   if (ui.sel && !e.target.closest('input,select,dialog')) { ui.sel = null; renderAll(); }
 });
@@ -1701,7 +1734,9 @@ document.addEventListener('keydown', e => {
 // 拖曳
 document.addEventListener('dragstart', e => {
   const chip = e.target.closest?.('.chip'); if (!chip) return;
-  e.dataTransfer.setData('text/plain', JSON.stringify({ k: chip.dataset.k, sid: chip.dataset.sid }));
+  const { k, sid } = chip.dataset;
+  const sids = ui.sel && ui.sel.k === k && ui.sel.sids.includes(sid) ? [...ui.sel.sids] : [sid];   // 拖曳已選的學生＝整批一起拖
+  e.dataTransfer.setData('text/plain', JSON.stringify({ k, sids }));
   e.dataTransfer.effectAllowed = 'move';
   chip.classList.add('dragging');
 });
@@ -1717,8 +1752,8 @@ document.addEventListener('drop', e => {
   const d = e.target.closest?.('.drop'); if (!d) return;
   e.preventDefault(); d.classList.remove('drop-hot');
   try {
-    const { k, sid } = JSON.parse(e.dataTransfer.getData('text/plain'));
-    if (k === d.dataset.k) moveStudent(k, sid, d.dataset.gid, d.dataset.seat);
+    const { k, sids } = JSON.parse(e.dataTransfer.getData('text/plain'));
+    if (k === d.dataset.k) moveMany(k, sids, d.dataset.gid, d.dataset.seat);
   } catch (err) {}
 });
 
