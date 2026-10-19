@@ -193,6 +193,7 @@ details.import summary { cursor: pointer; padding: 10px 14px; font-weight: 700; 
 }
 .pool h3 { font-size: .95rem; margin-bottom: 8px; display: flex; justify-content: space-between; }
 .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.group-rows { display: grid; gap: 12px; min-width: 0; }
 /* 活動、用餐、房間的格子較小，一個畫面看得到更多組／桌／房 */
 :is(#sec-activity, #sec-dining, #sec-rooms) .card-sub select { padding: 1px 4px; font-size: .85rem; }
 :is(#sec-activity, #sec-dining, #sec-rooms) .groups { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
@@ -1381,7 +1382,7 @@ function renderBoard(k) {
        <button class="btn" type="button" data-act="add-group" data-k="${k}" data-gender="F">＋ 女生房</button>`
     : `<button class="btn" type="button" data-act="add-group" data-k="${k}">＋ 新增一${cfg.unit}</button>`;
 
-  const cards = b.groups.map((g, gi) => {
+  const cardOf = g => {
     const mem = g.members.map(stu).filter(Boolean);
     const cap = gcap(k, g);
     const nm = mem.filter(s => s.gender === 'M').length, nf = mem.filter(s => s.gender === 'F').length;
@@ -1409,7 +1410,12 @@ function renderBoard(k) {
       <table class="mtable print-only">${rows}</table>
       ${notesHTML(k, mem)}
     </div>`;
-  }).join('');
+  };
+  // 房間分組：男生房一排、女生房另起一排，不互相遞補
+  const cards = cfg.gender
+    ? ['M', 'F', ''].map(gd => b.groups.filter(g => (g.gender || '') === gd)).filter(list => list.length)
+        .map(list => `<div class="groups">${list.map(cardOf).join('')}</div>`).join('')
+    : b.groups.length ? `<div class="groups">${b.groups.map(cardOf).join('')}</div>` : '';
   let summary = '';
   if (k === 'dining') {
     const cnt = {};
@@ -1438,7 +1444,7 @@ function renderBoard(k) {
         <h3><span>未分組</span><span class="num">${pool.length}</span></h3>
         <div class="chips drop" data-k="${k}" data-gid="">${pool.length ? pool.map(s => chipHTML(k, s, null)).join('') : '<span class="empty">全部都分好了</span>'}</div>
       </aside>
-      <div class="groups">${cards || `<p class="hint">還沒有${cfg.label.replace('分組', '')}的組別。設定好人數後按「自動${k === 'rooms' ? '分房' : k === 'dining' ? '排桌' : '分組'}」。</p>`}</div>
+      <div class="group-rows">${cards || `<p class="hint">還沒有${cfg.label.replace('分組', '')}的組別。設定好人數後按「自動${k === 'rooms' ? '分房' : k === 'dining' ? '排桌' : '分組'}」。</p>`}</div>
     </div>`;
 }
 function renderBus() {
