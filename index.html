@@ -29,6 +29,7 @@
   --warn: #b5370f;
   --warn-bg: #fff1e8;
   --ok: #1f7a3c;
+  --ok-bg: #e2f3e7;
   --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --r: 8px;
@@ -40,7 +41,7 @@
     --boy-bg: #1d2e4a; --boy-line: #4a72b3; --boy-ink: #bcd4ff;
     --girl-bg: #45212f; --girl-line: #b65a7c; --girl-ink: #ffc6d8;
     --none-bg: #262f2d; --none-line: #4a5653;
-    --warn: #ff9b73; --warn-bg: #3a2219; --ok: #6fd18f;
+    --warn: #ff9b73; --warn-bg: #3a2219; --ok: #6fd18f; --ok-bg: #1d3526;
     color-scheme: dark;
   }
 }
@@ -50,7 +51,7 @@
   --boy-bg: #1d2e4a; --boy-line: #4a72b3; --boy-ink: #bcd4ff;
   --girl-bg: #45212f; --girl-line: #b65a7c; --girl-ink: #ffc6d8;
   --none-bg: #262f2d; --none-line: #4a5653;
-  --warn: #ff9b73; --warn-bg: #3a2219; --ok: #6fd18f;
+  --warn: #ff9b73; --warn-bg: #3a2219; --ok: #6fd18f; --ok-bg: #1d3526;
   color-scheme: dark;
 }
 
@@ -100,6 +101,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); }
 .tab .badge { font-size: .72rem; margin-left: 4px; padding: 0 6px; border-radius: 99px; background: var(--warn-bg); color: var(--warn); font-weight: 700; }
+.tab .badge.ok { background: var(--ok-bg); color: var(--ok); }
 
 /* ---------- 按鈕與輸入 ---------- */
 .btn {
@@ -1182,9 +1184,15 @@ function renderHeader() {
   document.title = `${t.title || '校外教學'}・行前分組`;
   $('#sampleNotice').hidden = !state.isSample;
   const badges = {};
-  for (const k of Object.keys(BOARDS)) { const n = unassigned(k).length; if (n && state.students.length) badges[k] = n; }
+  // 有未分組的人顯示人數，全部分好顯示綠色打勾
+  for (const k of Object.keys(BOARDS)) {
+    if (!state.students.length) continue;
+    const n = unassigned(k).length;
+    badges[k] = n ? `<span class="badge" title="還有 ${n} 人未分組">${n}</span>`
+      : `<span class="badge ok" title="全部分組完成" aria-label="已完成">✓</span>`;
+  }
   $('#tabs').innerHTML = TABS.map(([k, label]) =>
-    `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${ui.tab === k}">${label}${badges[k] ? `<span class="badge" title="未分組人數">${badges[k]}</span>` : ''}</button>`).join('');
+    `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${ui.tab === k}">${label}${badges[k] || ''}</button>`).join('');
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.dataset.tab === ui.tab));
   document.querySelectorAll('[data-trip]').forEach(el => {
     if (document.activeElement !== el) el.value = t[el.dataset.trip] ?? '';
