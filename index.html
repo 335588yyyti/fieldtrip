@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>校外教學行前分組</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 版面：上方固定的「行程頁籤」，下方為一張張工作頁；分組頁左側是未分組名單，右側是組別卡片 */
+:root {
+  --paper: #f4f6f3;
+  --surface: #ffffff;
+  --ink: #1c2826;
+  --muted: #5d6b67;
+  --line: #d5ddd9;
+  --primary: #13615b;
+  --primary-ink: #ffffff;
+  --accent: #e3a20b;          /* 校車黃，只用在選取與重點 */
+  --boy-bg: #dceaff;
+  --boy-line: #7ea6e6;
+  --boy-ink: #173f80;
+  --girl-bg: #ffe0ea;
+  --girl-line: #e68aa9;
+  --girl-ink: #8a1f47;
+  --none-bg: #ecefed;
+  --none-line: #b7c0bc;
+  --warn: #b5370f;
+  --warn-bg: #fff1e8;
+  --ok: #1f7a3c;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121816; --surface: #1b2321; --ink: #e5ece9; --muted: #9aa9a4; --line: #2f3b38;
+    --primary: #4fb3a9; --primary-ink: #0d1514; --accent: #f2bb3c;
+    --boy-bg: #1d2e4a; --boy-line: #4a72b3; --boy-ink: #bcd4ff;
+    --girl-bg: #45212f; --girl-line: #b65a7c; --girl-ink: #ffc6d8;
+    --none-bg: #262f2d; --none-line: #4a5653;
+    --warn: #ff9b73; --warn-bg: #3a2219; --ok: #6fd18f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #121816; --surface: #1b2321; --ink: #e5ece9; --muted: #9aa9a4; --line: #2f3b38;
+  --primary: #4fb3a9; --primary-ink: #0d1514; --accent: #f2bb3c;
+  --boy-bg: #1d2e4a; --boy-line: #4a72b3; --boy-ink: #bcd4ff;
+  --girl-bg: #45212f; --girl-line: #b65a7c; --girl-ink: #ffc6d8;
+  --none-bg: #262f2d; --none-line: #4a5653;
+  --warn: #ff9b73; --warn-bg: #3a2219; --ok: #6fd18f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 15px/1.6 var(--font-body);
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.3; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- 頁首 ---------- */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.top-inner, main {
+  max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-block: 12px 6px; }
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 260px; }
+.brand h1 { font-size: 1.25rem; font-weight: 900; letter-spacing: .02em; }
+.brand .meta { color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; margin-bottom: -1px; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  appearance: none; border: 0; background: none; cursor: pointer; white-space: nowrap;
+  padding: 8px 12px 10px; color: var(--muted); font-weight: 500; border-bottom: 3px solid transparent;
+}
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); }
+.tab .badge { font-size: .72rem; margin-left: 4px; padding: 0 6px; border-radius: 99px; background: var(--warn-bg); color: var(--warn); font-weight: 700; }
+
+/* ---------- 按鈕與輸入 ---------- */
+.btn {
+  appearance: none; cursor: pointer; border: 1px solid var(--line); background: var(--surface);
+  padding: 6px 12px; border-radius: var(--r); font-weight: 500; line-height: 1.4; white-space: nowrap;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.danger { color: var(--warn); }
+.btn.sm { padding: 2px 8px; font-size: .85rem; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+input[type="text"], input[type="tel"], input[type="number"], input[type="date"], select, textarea {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 8px; min-width: 0;
+}
+input[type="number"] { width: 4.5em; }
+textarea { width: 100%; resize: vertical; }
+label.inline { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* ---------- 頁面 ---------- */
+main { padding-block: 20px 60px; }
+.section { display: none; }
+.section.active { display: block; }
+.print-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 14px; }
+.print-head h2 { font-size: 1.45rem; font-weight: 900; }
+.print-head p { margin: 0; color: var(--muted); font-size: .9rem; }
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  margin-bottom: 14px;
+}
+.toolbar .sep { flex: 1 1 0; }
+.hint { color: var(--muted); font-size: .85rem; }
+.notice {
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+  padding: 10px 14px; border-radius: var(--r); background: var(--warn-bg); color: var(--warn); margin-bottom: 14px; font-weight: 500;
+}
+.notice .btn { color: var(--ink); }
+.print-only { display: none; }
+
+/* ---------- 性別色塊 ---------- */
+.g-M { --g-bg: var(--boy-bg); --g-line: var(--boy-line); --g-ink: var(--boy-ink); }
+.g-F { --g-bg: var(--girl-bg); --g-line: var(--girl-line); --g-ink: var(--girl-ink); }
+.g-X { --g-bg: var(--none-bg); --g-line: var(--none-line); --g-ink: var(--ink); }
+.sex {
+  display: inline-block; min-width: 1.8em; text-align: center; font-weight: 700; font-size: .82rem;
+  padding: 0 6px; border-radius: 4px; background: var(--g-bg); color: var(--g-ink); border: 1px solid var(--g-line);
+}
+.legend { display: inline-flex; gap: 6px; align-items: center; }
+
+/* ---------- 表格 ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.tbl { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.tbl th, .tbl td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.tbl th { font-size: .78rem; letter-spacing: .06em; color: var(--muted); font-weight: 700; background: var(--surface); white-space: nowrap; }
+.tbl td.nowrap, .tbl .nowrap { white-space: nowrap; }
+.tbl tr.g-M td.name, .tbl tr.g-F td.name, .tbl tr.g-X td.name { background: var(--g-bg); color: var(--g-ink); font-weight: 700; box-shadow: inset 4px 0 0 var(--g-line); }
+.tbl tr.grp td { background: var(--paper); font-weight: 700; }
+.tbl .box { display: inline-block; width: 1.1em; height: 1.1em; border: 1.5px solid var(--muted); border-radius: 3px; vertical-align: middle; }
+.tbl td.check { text-align: center; }
+.tbl .sub { color: var(--muted); font-size: .82rem; }
+.tbl .flag { color: var(--warn); font-weight: 500; }
+
+.stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.stat {
+  display: flex; gap: 8px; align-items: baseline; padding: 6px 12px; border-radius: var(--r);
+  background: var(--surface); border: 1px solid var(--line); font-size: .88rem;
+}
+.stat b { font-size: 1.15rem; }
+.stat.todo b { color: var(--warn); }
+.stat.done b { color: var(--ok); }
+
+/* ---------- 匯入 ---------- */
+details.import { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 14px; }
+details.import summary { cursor: pointer; padding: 10px 14px; font-weight: 700; }
+.import-body { display: grid; gap: 12px; padding: 0 14px 14px; }
+.import-body ol { margin: 0; padding-left: 1.3em; color: var(--muted); font-size: .9rem; }
+.import-body code { font-family: var(--font-mono); font-size: .85em; background: var(--paper); padding: 1px 4px; border-radius: 4px; }
+
+/* ---------- 分組看板 ---------- */
+.board { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 14px; align-items: start; }
+.pool {
+  position: sticky; top: 112px; background: var(--surface); border: 1px dashed var(--muted); border-radius: var(--r);
+  padding: 10px; max-height: calc(100vh - 130px); overflow: auto;
+}
+.pool h3 { font-size: .95rem; margin-bottom: 8px; display: flex; justify-content: space-between; }
+.groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  display: flex; flex-direction: column; min-width: 0;
+}
+.card.over { border-color: var(--warn); }
+.card-h { display: flex; align-items: center; gap: 6px; padding: 8px 8px 6px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.card-h .gname { flex: 1 1 90px; font-weight: 700; border-color: transparent; background: transparent; padding: 2px 4px; }
+.card-h .gname:hover, .card-h .gname:focus { border-color: var(--line); }
+.card-h .count { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.card.over .count { color: var(--warn); font-weight: 700; }
+.card-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 6px 10px 0; font-size: .85rem; color: var(--muted); }
+.room-tag { font-size: .78rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--g-bg); color: var(--g-ink); border: 1px solid var(--g-line); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; min-height: 64px; align-content: flex-start; flex: 1; border-radius: 0 0 var(--r) var(--r); }
+.chips.drop-hot { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -4px; }
+.chips .empty { color: var(--muted); font-size: .82rem; align-self: center; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; cursor: grab;
+  background: var(--g-bg); color: var(--g-ink); border: 1px solid var(--g-line); font-size: .9rem; user-select: none;
+  touch-action: manipulation;
+}
+.chip .no { font-family: var(--font-mono); font-size: .78rem; opacity: .75; }
+.chip .mark { font-size: .75rem; font-weight: 700; color: var(--warn); }
+.chip.sel { outline: 3px solid var(--accent); outline-offset: 1px; }
+.chip.dragging { opacity: .4; }
+.mtable { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.mtable td { padding: 3px 6px; border-top: 1px solid var(--line); }
+
+/* ---------- 設定頁 ---------- */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px 16px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span { font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.field.wide { grid-column: 1 / -1; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin-bottom: 16px; }
+.panel h3 { font-size: 1.05rem; margin-bottom: 12px; }
+.panel .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.idea-list { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 70ch; }
+.idea-list b { color: var(--ink); }
+
+/* ---------- 對話框與提示 ---------- */
+dialog {
+  border: 1px solid var(--line); border-radius: 12px; padding: 0; background: var(--surface); color: var(--ink);
+  width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 40px);
+}
+dialog::backdrop { background: rgb(0 0 0 / .45); }
+dialog form { display: grid; gap: 14px; padding: 18px; }
+dialog h3 { font-size: 1.1rem; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+fieldset { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px 12px; margin: 0; }
+legend { font-size: .82rem; font-weight: 700; color: var(--muted); padding: 0 4px; }
+.radio-row { display: flex; gap: 14px; align-items: center; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: var(--r); font-weight: 500;
+  max-width: calc(100vw - 32px); z-index: 20; box-shadow: 0 6px 20px rgb(0 0 0 / .25);
+}
+footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
+
+@media (max-width: 760px) {
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .pool { position: static; max-height: none; }
+  .brand { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .chip { transition: transform .12s; }
+  .chip:hover { transform: translateY(-1px); }
+}
+
+/* ---------- 列印 ---------- */
+@page { size: A4; margin: 12mm 11mm; }
+@page wide { size: A4 landscape; margin: 10mm; }
+@media print {
+  :root:root:root {
+    --paper: #fff; --surface: #fff; --ink: #000; --muted: #444; --line: #9aa3a0;
+    --boy-bg: #dceaff; --boy-line: #6d95d6; --boy-ink: #0f2f66;
+    --girl-bg: #ffdfe9; --girl-line: #d97a9c; --girl-ink: #6d1236;
+    --none-bg: #eee; --none-line: #999; --warn: #a3300c; --warn-bg: #fff;
+    color-scheme: light;
+  }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-size: 10.5pt; background: #fff; }
+  body::before { display: none; }
+  .top, .no-print, .toolbar, details.import, dialog, .toast, .pool, .chips, .gname, .card-h input, .card-h select, .card-h .btn, .card-sub select, .card-sub label { display: none !important; }
+  main { padding: 0; max-width: none; }
+  .section, .section.active { display: none; }
+  body:not(.print-all) .section.active { display: block; }
+  body.print-all .section.printable { display: block; }
+  body.print-all .section.printable ~ .section.printable { break-before: page; }
+  .print-only { display: block; }
+  table.print-only { display: table; }
+  span.print-only { display: inline; }
+  .print-head { border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 10px; }
+  .print-head h2 { font-size: 15pt; }
+  .print-head p { color: #000; }
+  .board { display: block; }
+  .groups { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .mtable td { white-space: nowrap; }
+  .mtable td:last-child { white-space: normal; width: 45%; }
+  #sec-rooms .groups { grid-template-columns: repeat(3, 1fr); }
+  .card { break-inside: avoid; border: 1px solid #555; }
+  .card-h { padding: 4px 8px; background: #f2f2f2; }
+  .table-wrap { border: 0; overflow: visible; }
+  .tbl { font-size: 9.5pt; }
+  .tbl th, .tbl td { padding: 3px 5px; border: 1px solid #888; }
+  .tbl thead { display: table-header-group; }
+  .tbl tr { break-inside: avoid; }
+  .stats { display: none; }
+  #sec-contacts, #sec-rollcall, #sec-students { page: wide; }
+  .notice { border: 1px solid var(--warn); }
+  footer.foot { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="top-row">
+      <div class="brand">
+        <h1 id="brandTitle">校外教學</h1>
+        <span class="meta" id="brandMeta"></span>
+      </div>
+      <div class="top-actions">
+        <button class="btn" type="button" data-act="print-one" title="只印目前這一頁">列印本頁</button>
+        <button class="btn primary" type="button" data-act="print-all" title="名單、各分組、聯絡資料、點名表一次印出">全部列印</button>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+  </div>
+</header>
+
+<main>
+  <div id="sampleNotice" class="notice no-print" hidden>
+    <span>目前顯示的是範例學生（姓名、電話皆為虛構），方便你先試用各項功能。</span>
+    <button class="btn sm" type="button" data-act="clear-sample">清除範例，開始建立我的名單</button>
+  </div>
+
+  <!-- 基本資料 -->
+  <section class="section" id="sec-settings" data-tab="settings">
+    <div class="print-head"><h2>行程基本資料</h2><p>這些資訊會出現在每一張列印頁的標題列。</p></div>
+    <div class="panel">
+      <h3>行程</h3>
+      <div class="form-grid">
+        <label class="field"><span>活動名稱</span><input type="text" id="t-title" data-trip="title" placeholder="例：六年級畢業旅行"></label>
+        <label class="field"><span>日期</span><input type="text" id="t-date" data-trip="date" placeholder="例：2026/11/12–11/14"></label>
+        <label class="field"><span>地點</span><input type="text" id="t-place" data-trip="place" placeholder="例：六福村、台中科博館"></label>
+        <label class="field"><span>學校</span><input type="text" id="t-school" data-trip="school"></label>
+        <label class="field"><span>班級</span><input type="text" id="t-cls" data-trip="cls" placeholder="例：六年三班"></label>
+        <label class="field"><span>帶隊老師</span><input type="text" id="t-teacher" data-trip="teacher"></label>
+        <label class="field"><span>老師手機</span><input type="tel" id="t-teacherPhone" data-trip="teacherPhone"></label>
+        <label class="field"><span>住宿地點</span><input type="text" id="t-hotel" data-trip="hotel" placeholder="飯店名稱與電話"></label>
+        <label class="field wide"><span>隨隊人員與重要電話（會印在聯絡資料頁上方）</span>
+          <textarea id="t-staff" data-trip="staff" rows="3" placeholder="例：領隊 王小姐 0912-xxx-xxx／隨隊護理師 李老師／遊覽車 1 號車 司機 陳先生／學校總機 02-xxxx-xxxx"></textarea></label>
+        <label class="field wide"><span>點名時段（用逗號分開，會變成點名表的欄位）</span>
+          <input type="text" id="t-checkpoints" data-trip="checkpoints"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>資料備份</h3>
+      <p class="hint">所有資料只存在這台電腦的這個瀏覽器裡，不會上傳。換電腦、清除瀏覽紀錄前，請先下載備份檔。</p>
+      <div class="row">
+        <button class="btn" type="button" data-act="backup">下載備份檔 (.json)</button>
+        <label class="btn" for="restoreFile">從備份檔還原…</label>
+        <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+        <button class="btn" type="button" data-act="load-sample">載入範例資料</button>
+        <button class="btn danger" type="button" data-act="reset-all">清除全部資料</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>行前還可以準備的事</h3>
+      <ul class="idea-list hint">
+        <li><b>點名表</b>：已內建，依點名時段產生勾選欄，可依座號、活動組或房間排序後印出。</li>
+        <li><b>特殊照護</b>：已內建，彙整素食、過敏、氣喘、暈車、用藥等學生，讓隨隊老師與餐廳先知道。</li>
+        <li><b>遊覽車分車與座位</b>：多車出發時，每車的名單與負責老師。</li>
+        <li><b>保險名冊</b>：旅平險通常需要身分證字號與生日，屬敏感資料，建議另用學校系統處理。</li>
+        <li><b>家長同意書回條</b>：追蹤每位學生是否繳回、是否繳費。</li>
+        <li><b>學生隨身小卡</b>：寫上組別、房號、老師電話、集合地點，掛在名牌套裡。</li>
+        <li><b>行李與服裝提醒</b>：分組名單旁附上集合時間與攜帶物品，一起發給家長。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 學生名單 -->
+  <section class="section printable" id="sec-students" data-tab="students">
+    <div class="ph"></div>
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <button class="btn primary" type="button" data-act="add-student">＋ 新增學生</button>
+      <button class="btn" type="button" data-act="open-import">匯入名單</button>
+      <button class="btn" type="button" data-act="template">下載 Excel 範本 (CSV)</button>
+      <button class="btn" type="button" data-act="export-csv">匯出名單＋分組 (CSV)</button>
+      <span class="sep"></span>
+      <span class="legend hint"><span class="sex g-M">男</span><span class="sex g-F">女</span> 色塊</span>
+    </div>
+    <details class="import" id="importBox">
+      <summary>匯入學生名單</summary>
+      <div class="import-body">
+        <ol>
+          <li>可直接選 Excel 檔（.xlsx）或 CSV，也可以從 Excel 選取整個表格後複製，貼到下方框框。</li>
+          <li>第一列放欄位名稱，系統會自動辨認：<code>座號</code> <code>姓名</code> <code>性別</code> <code>學生手機</code> <code>緊急聯絡人1</code> <code>關係1</code> <code>電話1</code> <code>緊急聯絡人2</code> <code>關係2</code> <code>電話2</code> <code>飲食</code> <code>過敏/醫療</code> <code>備註</code>。沒有的欄位可以省略。</li>
+          <li>性別填「男／女」即可。Excel 把手機開頭的 0 吃掉也沒關係，匯入時會自動補回。</li>
+        </ol>
+        <div class="row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <input type="file" id="importFile" accept=".csv,.txt,.tsv,.xlsx,.xls">
+        </div>
+        <textarea id="importText" rows="6" placeholder="或在這裡貼上 Excel 表格內容（含標題列）"></textarea>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          <label class="inline"><input type="radio" name="importMode" id="im-replace" value="replace" checked> 取代目前名單（分組會清空）</label>
+          <label class="inline"><input type="radio" name="importMode" id="im-append" value="append"> 加到目前名單後面</label>
+          <span class="sep" style="flex:1"></span>
+          <button class="btn primary" type="button" data-act="do-import">匯入</button>
+        </div>
+      </div>
+    </details>
+    <div class="table-wrap"><table class="tbl" id="studentTable"></table></div>
+  </section>
+
+  <section class="section printable" id="sec-activity" data-tab="activity" data-board="activity"></section>
+  <section class="section printable" id="sec-dining" data-tab="dining" data-board="dining"></section>
+  <section class="section printable" id="sec-rooms" data-tab="rooms" data-board="rooms"></section>
+
+  <!-- 聯絡資料 -->
+  <section class="section printable" id="sec-contacts" data-tab="contacts">
+    <div class="ph"></div>
+    <div id="staffBox"></div>
+    <div class="table-wrap"><table class="tbl" id="contactTable"></table></div>
+  </section>
+
+  <!-- 點名表 -->
+  <section class="section printable" id="sec-rollcall" data-tab="rollcall">
+    <div class="ph"></div>
+    <div class="toolbar">
+      <label class="inline">排序
+        <select id="rollSort">
+          <option value="no">依座號</option>
+          <option value="activity">依活動組</option>
+          <option value="rooms">依房間</option>
+          <option value="dining">依用餐桌</option>
+        </select></label>
+      <span class="hint">點名時段可在「基本資料」修改。</span>
+    </div>
+    <div class="table-wrap"><table class="tbl" id="rollTable"></table></div>
+  </section>
+
+  <!-- 特殊照護 -->
+  <section class="section printable" id="sec-care" data-tab="care">
+    <div class="ph"></div>
+    <div class="stats" id="careStats"></div>
+    <div class="table-wrap"><table class="tbl" id="careTable"></table></div>
+  </section>
+
+  <footer class="foot no-print">資料自動儲存在這個瀏覽器中，不會上傳到任何地方。<span id="saveState"></span></footer>
+</main>
+
+<!-- 學生編輯 -->
+<dialog id="stuDlg">
+  <form method="dialog" id="stuForm">
+    <h3 id="stuDlgTitle">編輯學生</h3>
+    <div class="form-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+      <label class="field"><span>座號</span><input type="text" id="f-no" inputmode="numeric"></label>
+      <label class="field"><span>姓名 *</span><input type="text" id="f-name" required></label>
+      <div class="field"><span>性別</span>
+        <div class="radio-row">
+          <label class="inline"><input type="radio" name="f-gender" id="f-gM" value="M"> 男</label>
+          <label class="inline"><input type="radio" name="f-gender" id="f-gF" value="F"> 女</label>
+        </div></div>
+      <label class="field"><span>學生手機</span><input type="tel" id="f-phone"></label>
+    </div>
+    <fieldset><legend>緊急聯絡人 1</legend>
+      <div class="form-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+        <label class="field"><span>姓名</span><input type="text" id="f-ec1Name"></label>
+        <label class="field"><span>關係</span><input type="text" id="f-ec1Rel" placeholder="父、母…"></label>
+        <label class="field"><span>電話</span><input type="tel" id="f-ec1Phone"></label>
+      </div></fieldset>
+    <fieldset><legend>緊急聯絡人 2</legend>
+      <div class="form-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+        <label class="field"><span>姓名</span><input type="text" id="f-ec2Name"></label>
+        <label class="field"><span>關係</span><input type="text" id="f-ec2Rel"></label>
+        <label class="field"><span>電話</span><input type="tel" id="f-ec2Phone"></label>
+      </div></fieldset>
+    <div class="form-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+      <label class="field"><span>飲食</span><input type="text" id="f-diet" placeholder="例：蛋奶素、不吃牛"></label>
+      <label class="field"><span>過敏／醫療</span><input type="text" id="f-medical" placeholder="例：花生過敏、氣喘"></label>
+      <label class="field"><span>備註</span><input type="text" id="f-note"></label>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" type="button" value="cancel" data-act="dlg-cancel">取消</button>
+      <button class="btn primary" type="submit" value="ok">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 確認 -->
+<dialog id="confirmDlg">
+  <form method="dialog">
+    <h3 id="confirmMsg"></h3>
+    <div class="dlg-actions">
+      <button class="btn" value="no">取消</button>
+      <button class="btn primary" value="yes" id="confirmYes">確定</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+'use strict';
+const KEY = 'fieldtrip-planner-v1';
+const TABS = [
+  ['settings', '基本資料'], ['students', '學生名單'], ['activity', '活動分組'], ['dining', '用餐分組'],
+  ['rooms', '房間分組'], ['contacts', '聯絡資料'], ['rollcall', '點名表'], ['care', '特殊照護'],
+];
+const FIELDS = ['no','name','gender','phone','ec1Name','ec1Rel','ec1Phone','ec2Name','ec2Rel','ec2Phone','diet','medical','note'];
+const LABELS = { no:'座號', name:'姓名', gender:'性別', phone:'學生手機', ec1Name:'緊急聯絡人1', ec1Rel:'關係1', ec1Phone:'電話1',
+  ec2Name:'緊急聯絡人2', ec2Rel:'關係2', ec2Phone:'電話2', diet:'飲食', medical:'過敏/醫療', note:'備註' };
+const ALIAS = {
+  no: ['座號','號碼','學號','編號','no','座號no'],
+  name: ['姓名','學生姓名','名字','name'],
+  gender: ['性別','gender','sex','男女'],
+  phone: ['學生手機','手機','學生電話','手機號碼','行動電話','學生手機號碼','學生行動電話','phone','mobile'],
+  ec1Name: ['緊急聯絡人1','緊急聯絡人一','聯絡人1','緊急聯絡人1姓名','緊急聯絡人','家長','家長姓名','監護人','聯絡人'],
+  ec1Rel: ['關係1','關係一','緊急聯絡人1關係','聯絡人1關係','關係','稱謂'],
+  ec1Phone: ['電話1','電話一','緊急聯絡人1電話','聯絡人1電話','緊急電話1','緊急聯絡電話','緊急電話','家長電話','家長手機','緊急聯絡電話1','聯絡電話'],
+  ec2Name: ['緊急聯絡人2','緊急聯絡人二','聯絡人2','緊急聯絡人2姓名'],
+  ec2Rel: ['關係2','關係二','緊急聯絡人2關係','聯絡人2關係'],
+  ec2Phone: ['電話2','電話二','緊急聯絡人2電話','聯絡人2電話','緊急電話2','緊急聯絡電話2'],
+  diet: ['飲食','飲食需求','葷素','素食','飲食習慣','飲食備註'],
+  medical: ['過敏/醫療','過敏醫療','過敏','醫療','疾病','病史','用藥','健康狀況','特殊疾病','醫療注意事項','過敏/疾病','健康注意事項'],
+  note: ['備註','其他','note','notes','說明'],
+};
+const BOARDS = {
+  activity: { label:'活動分組', unit:'組', hasCap:false, gender:false, leader:true,
+    extraLabel:'學生手機', extra: s => s.phone,
+    help:'樂園自由活動或參觀時的小組。自動分組會讓每組男女人數平均。' },
+  dining: { label:'用餐分組', unit:'桌', hasCap:true, gender:false, leader:false, defaultCap:10,
+    extraLabel:'飲食', extra: s => s.diet,
+    help:'圓桌用餐，每桌人數可整體調整，也可以單獨改某一桌。' },
+  rooms: { label:'房間分組', unit:'間', hasCap:true, gender:true, leader:false, defaultCap:4,
+    extraLabel:'過敏／醫療', extra: s => s.medical,
+    help:'男女分房，不同性別的學生不能放進同一間。每間人數可調整，房號可以直接改名稱。' },
+};
+
+/* ---------- 狀態 ---------- */
+function blankState() {
+  return {
+    trip: { title:'校外教學', date:'', place:'', school:'', cls:'', teacher:'', teacherPhone:'', hotel:'', staff:'',
+      checkpoints:'出發集合,上午點名,午餐,下午點名,返程上車,抵校' },
+    students: [],
+    activity: { n: 6, groups: [] },
+    dining: { cap: 10, groups: [] },
+    rooms: { cap: 4, groups: [] },
+    isSample: false,
+  };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    return normalizeState(JSON.parse(raw));
+  } catch (e) { return null; }
+}
+function normalizeState(s) {
+  const b = blankState();
+  if (!s || typeof s !== 'object' || !Array.isArray(s.students)) throw new Error('格式不符');
+  return {
+    trip: Object.assign(b.trip, s.trip || {}),
+    students: s.students.map(x => Object.assign({ id: uid() }, x)),
+    activity: Object.assign(b.activity, s.activity || {}),
+    dining: Object.assign(b.dining, s.dining || {}),
+    rooms: Object.assign(b.rooms, s.rooms || {}),
+    isSample: !!s.isSample,
+  };
+}
+let saveTimer;
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+    const t = new Date();
+    $('#saveState').textContent = ` 最後儲存：${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`;
+  } catch (e) {
+    $('#saveState').textContent = ' 無法自動儲存（瀏覽器封鎖了儲存空間），請記得下載備份檔。';
+  }
+}
+
+const ui = { tab: 'students', sel: null };
+let state;
+
+/* ---------- 小工具 ---------- */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const gcls = g => g === 'M' ? 'g-M' : g === 'F' ? 'g-F' : 'g-X';
+const gtxt = g => g === 'M' ? '男' : g === 'F' ? '女' : '?';
+const stu = id => state.students.find(s => s.id === id);
+function sortedStudents(list = state.students) {
+  return [...list].sort((a, b) => {
+    const na = parseFloat(a.no), nb = parseFloat(b.no);
+    if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+    if (isNaN(na) !== isNaN(nb)) return isNaN(na) ? 1 : -1;
+    return String(a.name).localeCompare(String(b.name), 'zh-Hant');
+  });
+}
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function fixPhone(p) {
+  p = String(p ?? '').trim();
+  if (/^9\d{8}$/.test(p)) p = '0' + p;
+  return p;
+}
+function parseGender(v) {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (!s) return '';
+  if (s.startsWith('男') || ['m','male','boy','b','1'].includes(s)) return 'M';
+  if (s.startsWith('女') || ['f','female','girl','g','2','0'].includes(s)) return 'F';
+  return '';
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+function confirmBox(msg, yes = '確定') {
+  const d = $('#confirmDlg');
+  $('#confirmMsg').textContent = msg;
+  $('#confirmYes').textContent = yes;
+  d.returnValue = '';
+  return new Promise(res => {
+    d.addEventListener('close', () => res(d.returnValue === 'yes'), { once: true });
+    d.showModal();
+  });
+}
+function download(name, text, type) {
+  const blob = new Blob([text], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function fileStamp() {
+  const t = state.trip;
+  return (t.cls || t.title || '校外教學').replace(/[\\/:*?"<>|\s]/g, '');
+}
+
+/* ---------- 分組邏輯 ---------- */
+const gcap = (k, g) => BOARDS[k].hasCap ? (Number(g.cap) || Number(state[k].cap) || BOARDS[k].defaultCap) : Infinity;
+function memberOf(k) {
+  const m = {};
+  state[k].groups.forEach(g => g.members.forEach(id => { m[id] = g; }));
+  return m;
+}
+function unassigned(k) {
+  const m = memberOf(k);
+  return sortedStudents().filter(s => !m[s.id]);
+}
+function cleanBoards() {
+  const ids = new Set(state.students.map(s => s.id));
+  for (const k of Object.keys(BOARDS)) {
+    const seen = new Set();
+    state[k].groups.forEach(g => {
+      g.members = g.members.filter(id => ids.has(id) && !seen.has(id) && seen.add(id));
+      if (g.leaderId && !g.members.includes(g.leaderId)) g.leaderId = '';
+    });
+  }
+}
+function newGroup(k, i, gender) {
+  const names = { activity: `第 ${i} 組`, dining: `第 ${i} 桌`, rooms: `${gender === 'F' ? '女' : '男'}生 ${i} 房` };
+  return { id: uid(), name: names[k], members: [], leaderId: '', cap: '', gender: gender || '' };
+}
+function moveStudent(k, sid, gid) {
+  const s = stu(sid); if (!s) return;
+  const g = gid ? state[k].groups.find(x => x.id === gid) : null;
+  if (g && BOARDS[k].gender && g.gender && s.gender && g.gender !== s.gender) {
+    toast(`男女分房：${s.name} 不能放進${g.gender === 'M' ? '男生' : '女生'}房。`);
+    return;
+  }
+  state[k].groups.forEach(x => {
+    x.members = x.members.filter(id => id !== sid);
+    if (x.leaderId === sid) x.leaderId = '';
+  });
+  if (g) {
+    if (BOARDS[k].gender && !g.gender && s.gender) g.gender = s.gender;
+    g.members.push(sid);
+    if (g.members.length > gcap(k, g)) toast(`${g.name} 已超過 ${gcap(k, g)} 人上限。`);
+  }
+  ui.sel = null;
+  save(); renderAll();
+}
+function orderList(list, mode) { return mode === 'random' ? shuffle(list) : sortedStudents(list); }
+function autoAssign(k, mode) {
+  const all = state.students;
+  const boys = orderList(all.filter(s => s.gender === 'M'), mode);
+  const girls = orderList(all.filter(s => s.gender === 'F'), mode);
+  const others = orderList(all.filter(s => s.gender !== 'M' && s.gender !== 'F'), mode);
+  if (k === 'rooms') {
+    const cap = Math.max(1, Number(state.rooms.cap) || 4);
+    const groups = [];
+    for (const [g, list] of [['M', boys], ['F', girls]]) {
+      if (!list.length) continue;
+      const n = Math.ceil(list.length / cap);
+      const base = Math.floor(list.length / n), extra = list.length % n;
+      let p = 0;
+      for (let j = 0; j < n; j++) {
+        const size = base + (j < extra ? 1 : 0);
+        const grp = newGroup('rooms', j + 1, g);
+        grp.members = list.slice(p, p + size).map(s => s.id);
+        p += size; groups.push(grp);
+      }
+    }
+    state.rooms.groups = groups;
+    if (others.length) toast(`${others.length} 位學生沒有填性別，請手動分房。`);
+  } else {
+    const list = [...boys, ...girls, ...others];
+    const n = k === 'activity'
+      ? Math.max(1, Number(state.activity.n) || 1)
+      : Math.max(1, Math.ceil(list.length / Math.max(1, Number(state.dining.cap) || 10)));
+    const groups = Array.from({ length: n }, (_, i) => newGroup(k, i + 1));
+    list.forEach((s, i) => groups[i % n].members.push(s.id));
+    state[k].groups = groups;
+  }
+}
+function fillUnassigned(k) {
+  const cfg = BOARDS[k];
+  let created = 0;
+  for (const s of unassigned(k)) {
+    let cands = state[k].groups.filter(g =>
+      (!cfg.gender || !g.gender || g.gender === s.gender) && g.members.length < gcap(k, g));
+    if (!cands.length) {
+      const sameKind = state[k].groups.filter(g => !cfg.gender || g.gender === s.gender).length;
+      const g = newGroup(k, sameKind + 1, cfg.gender ? s.gender : '');
+      state[k].groups.push(g); created++;
+      cands = [g];
+    }
+    const sameG = g => g.members.filter(id => stu(id)?.gender === s.gender).length;
+    cands.sort((a, b) => a.members.length - b.members.length || sameG(a) - sameG(b));
+    const g = cands[0];
+    if (cfg.gender && !g.gender) g.gender = s.gender;
+    g.members.push(s.id);
+  }
+  return created;
+}
+
+/* ---------- 匯入 ---------- */
+function parseDelimited(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const delim = first.includes('\t') ? '\t' : (first.split(',').length >= first.split(';').length ? ',' : ';');
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"' && f === '') q = true;
+    else if (c === delim) { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(f); rows.push(row); row = []; f = '';
+    } else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+const normH = s => String(s ?? '').toLowerCase().replace(/[\s（）()：:_\-.。]/g, '');
+function rowsToStudents(rows) {
+  if (!rows.length) return [];
+  const lookup = {};
+  for (const [f, list] of Object.entries(ALIAS)) list.forEach(a => { lookup[normH(a)] = f; });
+  const head = rows[0].map(normH);
+  const idx = {};
+  head.forEach((h, i) => {
+    let f = lookup[h];
+    if (!f) {
+      if (h.includes('姓名') && !h.includes('聯絡') && !h.includes('家長')) f = 'name';
+      else if (h.includes('性別')) f = 'gender';
+      else if (h.includes('座號')) f = 'no';
+      else if (h.includes('過敏') || h.includes('醫療') || h.includes('疾病')) f = 'medical';
+      else if (h.includes('飲食') || h.includes('素')) f = 'diet';
+    }
+    if (f && idx[f] === undefined) idx[f] = i;
+  });
+  let body = rows;
+  if (Object.keys(idx).length >= 2 && idx.name !== undefined) body = rows.slice(1);
+  else FIELDS.forEach((f, i) => { idx[f] = i; });
+  return body.map(r => {
+    const s = { id: uid() };
+    FIELDS.forEach(f => { s[f] = idx[f] !== undefined ? String(r[idx[f]] ?? '').trim() : ''; });
+    s.gender = parseGender(s.gender);
+    s.phone = fixPhone(s.phone); s.ec1Phone = fixPhone(s.ec1Phone); s.ec2Phone = fixPhone(s.ec2Phone);
+    return s;
+  }).filter(s => s.name);
+}
+function decodeText(buf) {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+  catch (e) { return new TextDecoder('big5').decode(buf); }   // 台灣版 Excel 另存的 CSV 常是 Big5
+}
+function loadXlsxLib() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload = res; sc.onerror = () => rej(new Error('無法載入 Excel 讀取元件'));
+    document.head.appendChild(sc);
+  });
+}
+async function readImportFile(file) {
+  const buf = await file.arrayBuffer();
+  if (/\.xlsx?$/i.test(file.name)) {
+    await loadXlsxLib();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sh = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, defval: '' })
+      .filter(r => r.some(c => String(c).trim() !== ''));
+  }
+  return parseDelimited(decodeText(buf));
+}
+async function doImport() {
+  const file = $('#importFile').files[0];
+  const text = $('#importText').value.trim();
+  let rows;
+  try {
+    if (file) rows = await readImportFile(file);
+    else if (text) rows = parseDelimited(text);
+    else { toast('請先選擇檔案，或貼上表格內容。'); return; }
+  } catch (e) {
+    toast(`${e.message}。沒有網路時請改用 CSV 或直接貼上。`); return;
+  }
+  const list = rowsToStudents(rows);
+  if (!list.length) { toast('沒有讀到任何學生，請確認第一列有「姓名」欄位。'); return; }
+  const replace = $('#im-replace').checked;
+  if (replace && state.students.length) {
+    const ok = await confirmBox(`將以 ${list.length} 位學生取代目前的 ${state.students.length} 位，並清空所有分組。確定嗎？`, '取代');
+    if (!ok) return;
+  }
+  if (replace || state.isSample) {
+    state.students = list;
+    for (const k of Object.keys(BOARDS)) state[k].groups = [];
+  } else state.students.push(...list);
+  state.isSample = false;
+  $('#importFile').value = ''; $('#importText').value = '';
+  $('#importBox').open = false;
+  const noGender = list.filter(s => !s.gender).length;
+  toast(`已匯入 ${list.length} 位學生。` + (noGender ? `其中 ${noGender} 位沒有性別，請補上。` : ''));
+  save(); renderAll();
+}
+
+/* ---------- 匯出 ---------- */
+const csvCell = v => /[",\n\r]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? '');
+function exportCsv() {
+  const ma = memberOf('activity'), md = memberOf('dining'), mr = memberOf('rooms');
+  const head = [...FIELDS.map(f => LABELS[f]), '活動組', '用餐桌', '房間'];
+  const lines = [head.map(csvCell).join(',')];
+  sortedStudents().forEach(s => {
+    lines.push([...FIELDS.map(f => f === 'gender' ? gtxt(s.gender).replace('?', '') : s[f]),
+      ma[s.id]?.name, md[s.id]?.name, mr[s.id]?.name].map(csvCell).join(','));
+  });
+  download(`${fileStamp()}_學生名單.csv`, '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+}
+function exportTemplate() {
+  const lines = [
+    FIELDS.map(f => LABELS[f]).join(','),
+    '1,王小明,男,0912345678,王大同,父,0922333444,林美華,母,0933444555,,花生過敏,',
+    '2,李小美,女,,李志強,父,0955666777,陳淑芬,母,0966777888,蛋奶素,,會暈車',
+  ];
+  download('學生名單範本.csv', '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+}
+
+/* ---------- 畫面 ---------- */
+function printHead(title) {
+  const t = state.trip;
+  const meta = [t.date && `日期 ${t.date}`, t.place && `地點 ${t.place}`, (t.school || t.cls) && `${t.school} ${t.cls}`.trim(),
+    t.teacher && `帶隊 ${t.teacher}${t.teacherPhone ? ' ' + t.teacherPhone : ''}`].filter(Boolean).join('　');
+  return `<div class="print-head"><h2>${esc(t.title || '校外教學')}・${esc(title)}</h2><p>${esc(meta)}</p></div>`;
+}
+function renderHeader() {
+  const t = state.trip;
+  $('#brandTitle').textContent = t.title || '校外教學';
+  $('#brandMeta').textContent = [t.date, t.place, t.cls].filter(Boolean).join('・');
+  document.title = `${t.title || '校外教學'}・行前分組`;
+  $('#sampleNotice').hidden = !state.isSample;
+  const badges = {};
+  for (const k of Object.keys(BOARDS)) { const n = unassigned(k).length; if (n && state.students.length) badges[k] = n; }
+  $('#tabs').innerHTML = TABS.map(([k, label]) =>
+    `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${ui.tab === k}">${label}${badges[k] ? `<span class="badge" title="未分組人數">${badges[k]}</span>` : ''}</button>`).join('');
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.dataset.tab === ui.tab));
+  document.querySelectorAll('[data-trip]').forEach(el => {
+    if (document.activeElement !== el) el.value = t[el.dataset.trip] ?? '';
+  });
+}
+function renderStudents() {
+  const sec = $('#sec-students');
+  sec.querySelector('.ph').innerHTML = printHead('學生名單');
+  const all = state.students;
+  const m = all.filter(s => s.gender === 'M').length, f = all.filter(s => s.gender === 'F').length;
+  const stat = (k) => { const n = unassigned(k).length;
+    return `<span class="stat ${n ? 'todo' : 'done'}">${BOARDS[k].label} <b class="num">${n ? n : '✓'}</b>${n ? ' 人未分' : ' 完成'}</span>`; };
+  $('#stats').innerHTML = `<span class="stat">全班 <b class="num">${all.length}</b> 人</span>
+    <span class="stat"><span class="sex g-M">男</span><b class="num">${m}</b></span>
+    <span class="stat"><span class="sex g-F">女</span><b class="num">${f}</b></span>
+    ${all.length - m - f ? `<span class="stat todo">未填性別 <b class="num">${all.length - m - f}</b></span>` : ''}
+    ${all.length ? Object.keys(BOARDS).map(stat).join('') : ''}`;
+  const tb = $('#studentTable');
+  if (!all.length) {
+    tb.innerHTML = `<tbody><tr><td style="padding:28px;text-align:center" class="hint">還沒有學生。按「匯入名單」貼上 Excel 表格，或按「＋ 新增學生」逐一輸入。</td></tr></tbody>`;
+    return;
+  }
+  tb.innerHTML = `<thead><tr><th>座號</th><th>姓名</th><th>性別</th><th>學生手機</th><th>緊急聯絡人 1</th><th>緊急聯絡人 2</th><th>飲食</th><th>過敏／醫療</th><th>備註</th><th class="no-print"></th></tr></thead><tbody>` +
+    sortedStudents().map(s => `<tr class="${gcls(s.gender)}">
+      <td class="num nowrap">${esc(s.no)}</td><td class="name nowrap">${esc(s.name)}</td>
+      <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td>
+      <td class="num nowrap">${esc(s.phone)}</td>
+      <td class="nowrap">${esc(s.ec1Name)}${s.ec1Rel ? `<span class="sub">（${esc(s.ec1Rel)}）</span>` : ''}<br><span class="num">${esc(s.ec1Phone)}</span></td>
+      <td class="nowrap">${esc(s.ec2Name)}${s.ec2Rel ? `<span class="sub">（${esc(s.ec2Rel)}）</span>` : ''}<br><span class="num">${esc(s.ec2Phone)}</span></td>
+      <td>${esc(s.diet)}</td><td class="flag">${esc(s.medical)}</td><td>${esc(s.note)}</td>
+      <td class="no-print nowrap"><button class="btn sm" type="button" data-act="edit-student" data-sid="${s.id}">編輯</button>
+        <button class="btn sm ghost danger" type="button" data-act="del-student" data-sid="${s.id}" aria-label="刪除 ${esc(s.name)}">刪除</button></td></tr>`).join('') + '</tbody>';
+}
+function chipHTML(k, s, g) {
+  const leader = g && g.leaderId === s.id;
+  const sel = ui.sel && ui.sel.k === k && ui.sel.sid === s.id;
+  const warn = s.medical ? `<span class="mark" title="${esc(s.medical)}">!</span>` : '';
+  const diet = k === 'dining' && s.diet ? `<span class="mark" title="${esc(s.diet)}">素</span>` : '';
+  return `<span class="chip ${gcls(s.gender)}${sel ? ' sel' : ''}" draggable="true" tabindex="0" role="button" data-k="${k}" data-sid="${s.id}"
+    title="${esc(s.name)}${s.diet ? '｜飲食：' + esc(s.diet) : ''}${s.medical ? '｜' + esc(s.medical) : ''}">
+    ${s.no ? `<span class="no">${esc(s.no)}</span>` : ''}${leader ? '★' : ''}${esc(s.name)}${k === 'dining' ? diet : warn}</span>`;
+}
+function renderBoard(k) {
+  const cfg = BOARDS[k], b = state[k];
+  const sec = document.querySelector(`[data-board="${k}"]`);
+  const pool = unassigned(k);
+  const modeId = `${k}-mode`;
+  const prevMode = document.getElementById(modeId)?.value || 'no';
+  const sizeCtl = k === 'activity'
+    ? `<label class="inline">組數 <input type="number" min="1" max="60" id="activity-n" data-board-set="activity:n" value="${esc(b.n)}"></label>`
+    : `<label class="inline">每${cfg.unit === '桌' ? '桌' : '間'} <input type="number" min="1" max="40" id="${k}-cap" data-board-set="${k}:cap" value="${esc(b.cap)}"> 人</label>`;
+  const addBtns = cfg.gender
+    ? `<button class="btn" type="button" data-act="add-group" data-k="${k}" data-gender="M">＋ 男生房</button>
+       <button class="btn" type="button" data-act="add-group" data-k="${k}" data-gender="F">＋ 女生房</button>`
+    : `<button class="btn" type="button" data-act="add-group" data-k="${k}">＋ 新增一${cfg.unit}</button>`;
+
+  const cards = b.groups.map((g, gi) => {
+    const mem = g.members.map(stu).filter(Boolean);
+    const cap = gcap(k, g);
+    const nm = mem.filter(s => s.gender === 'M').length, nf = mem.filter(s => s.gender === 'F').length;
+    const over = mem.length > cap;
+    const capInput = cfg.hasCap
+      ? `<input type="number" min="1" max="40" id="cap-${g.id}" data-gcap="${k}:${g.id}" value="${esc(g.cap || '')}" placeholder="${esc(b.cap)}" title="這${cfg.unit}的人數上限（空白＝用預設 ${esc(b.cap)} 人）">`
+      : '';
+    const countTxt = cfg.hasCap ? `${mem.length}/${cap} 人` : `${mem.length} 人`;
+    const sub = [];
+    if (cfg.gender) sub.push(`<span class="room-tag ${gcls(g.gender)}">${g.gender ? gtxt(g.gender) + '生房' : '尚未指定'}</span>`);
+    if (!cfg.gender) sub.push(`<span>男 ${nm}・女 ${nf}</span>`);
+    if (cfg.leader) sub.push(`<label class="inline">組長 <select id="leader-${g.id}" data-leader="${k}:${g.id}"><option value="">—</option>${
+      sortedStudents(mem).map(s => `<option value="${s.id}"${g.leaderId === s.id ? ' selected' : ''}>${esc(s.no)} ${esc(s.name)}</option>`).join('')}</select></label>`);
+    if (cfg.leader && g.leaderId && stu(g.leaderId)) sub.push(`<span class="print-only">組長：${esc(stu(g.leaderId).name)}</span>`);
+    const rows = sortedStudents(mem).map(s => `<tr><td class="num">${esc(s.no)}</td><td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span> ${g.leaderId === s.id ? '★' : ''}${esc(s.name)}</td><td class="num">${esc(cfg.extra(s))}</td></tr>`).join('');
+    return `<div class="card${over ? ' over' : ''}" data-gid="${g.id}">
+      <div class="card-h">
+        <input type="text" class="gname" id="gname-${g.id}" data-gname="${k}:${g.id}" value="${esc(g.name)}" aria-label="名稱">
+        <span class="print-only" style="font-weight:900;flex:1">${esc(g.name)}</span>
+        <span class="count">${countTxt}</span>${capInput}
+        <button class="btn sm ghost" type="button" data-act="del-group" data-k="${k}" data-gid="${g.id}" title="刪除（成員回到未分組）" aria-label="刪除 ${esc(g.name)}">✕</button>
+      </div>
+      <div class="card-sub">${sub.join('')}</div>
+      <div class="chips drop" data-k="${k}" data-gid="${g.id}">${mem.length ? sortedStudents(mem).map(s => chipHTML(k, s, g)).join('') : '<span class="empty">拖曳學生到這裡</span>'}</div>
+      <table class="mtable print-only">${rows}</table>
+    </div>`;
+  }).join('');
+
+  sec.innerHTML = `${printHead(cfg.label)}
+    <div class="toolbar">
+      ${sizeCtl}
+      <label class="inline">順序 <select id="${modeId}"><option value="no">依座號</option><option value="random">隨機</option></select></label>
+      <button class="btn primary" type="button" data-act="auto" data-k="${k}">自動${k === 'rooms' ? '分房（男女分開）' : k === 'dining' ? '排桌' : '分組'}</button>
+      <button class="btn" type="button" data-act="fill" data-k="${k}">只分配未分組的人</button>
+      ${addBtns}
+      <span class="sep"></span>
+      <button class="btn ghost danger" type="button" data-act="clear-board" data-k="${k}">全部移回未分組</button>
+    </div>
+    <p class="hint no-print" style="margin:-4px 0 12px">${cfg.help} 調整方式：把學生拖到另一${cfg.unit}；手機或平板上可以先點學生、再點要放的${cfg.unit}。</p>
+    ${pool.length && b.groups.length ? `<div class="notice print-only">尚有 ${pool.length} 人未分配：${pool.map(s => esc(s.name)).join('、')}</div>` : ''}
+    <div class="board">
+      <aside class="pool">
+        <h3><span>未分組</span><span class="num">${pool.length}</span></h3>
+        <div class="chips drop" data-k="${k}" data-gid="">${pool.length ? pool.map(s => chipHTML(k, s, null)).join('') : '<span class="empty">全部都分好了</span>'}</div>
+      </aside>
+      <div class="groups">${cards || `<p class="hint">還沒有${cfg.label.replace('分組', '')}的組別。設定好人數後按「自動${k === 'rooms' ? '分房' : k === 'dining' ? '排桌' : '分組'}」。</p>`}</div>
+    </div>`;
+  document.getElementById(modeId).value = prevMode;
+}
+function renderContacts() {
+  const sec = $('#sec-contacts');
+  sec.querySelector('.ph').innerHTML = printHead('學生緊急聯絡資料');
+  const t = state.trip;
+  const staff = [t.teacher && `帶隊老師：${t.teacher} ${t.teacherPhone || ''}`, t.hotel && `住宿：${t.hotel}`, t.staff].filter(Boolean);
+  $('#staffBox').innerHTML = staff.length
+    ? `<div class="panel" style="padding:10px 14px;white-space:pre-line">${esc(staff.join('\n'))}</div>` : '';
+  const ma = memberOf('activity'), mr = memberOf('rooms');
+  $('#contactTable').innerHTML = `<thead><tr><th>座號</th><th>姓名</th><th>性別</th><th>學生手機</th>
+    <th>緊急聯絡人 1</th><th>關係</th><th>電話</th><th>緊急聯絡人 2</th><th>關係</th><th>電話</th><th>活動組</th><th>房間</th><th>過敏／醫療</th></tr></thead><tbody>` +
+    sortedStudents().map(s => `<tr class="${gcls(s.gender)}"><td class="num">${esc(s.no)}</td><td class="name nowrap">${esc(s.name)}</td>
+      <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td><td class="num nowrap">${esc(s.phone)}</td>
+      <td class="nowrap">${esc(s.ec1Name)}</td><td class="nowrap">${esc(s.ec1Rel)}</td><td class="num nowrap">${esc(s.ec1Phone)}</td>
+      <td class="nowrap">${esc(s.ec2Name)}</td><td class="nowrap">${esc(s.ec2Rel)}</td><td class="num nowrap">${esc(s.ec2Phone)}</td>
+      <td class="nowrap">${esc(ma[s.id]?.name)}</td><td class="nowrap">${esc(mr[s.id]?.name)}</td><td class="flag">${esc(s.medical)}</td></tr>`).join('') + '</tbody>';
+}
+function renderRollcall() {
+  const sec = $('#sec-rollcall');
+  sec.querySelector('.ph').innerHTML = printHead('點名表');
+  const cps = String(state.trip.checkpoints || '').split(/[,，、;；]/).map(s => s.trim()).filter(Boolean);
+  const by = $('#rollSort').value;
+  const ma = memberOf('activity'), md = memberOf('dining'), mr = memberOf('rooms');
+  let rows = '';
+  const line = s => `<tr class="${gcls(s.gender)}"><td class="num">${esc(s.no)}</td><td class="name nowrap">${esc(s.name)}</td>
+    <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td><td class="nowrap">${esc(ma[s.id]?.name)}</td><td class="nowrap">${esc(md[s.id]?.name)}</td><td class="nowrap">${esc(mr[s.id]?.name)}</td>
+    ${cps.map(() => '<td class="check"><span class="box"></span></td>').join('')}<td style="min-width:6em"></td></tr>`;
+  const colspan = 7 + cps.length;
+  if (by === 'no') rows = sortedStudents().map(line).join('');
+  else {
+    const m = memberOf(by);
+    state[by].groups.forEach(g => {
+      const mem = sortedStudents(g.members.map(stu).filter(Boolean));
+      const leader = g.leaderId && stu(g.leaderId);
+      rows += `<tr class="grp"><td colspan="${colspan}">${esc(g.name)}（${mem.length} 人${leader ? `，組長 ${esc(leader.name)}` : ''}）</td></tr>` + mem.map(line).join('');
+    });
+    const rest = sortedStudents().filter(s => !m[s.id]);
+    if (rest.length) rows += `<tr class="grp"><td colspan="${colspan}">未分組（${rest.length} 人）</td></tr>` + rest.map(line).join('');
+  }
+  $('#rollTable').innerHTML = `<thead><tr><th>座號</th><th>姓名</th><th>性別</th><th>活動組</th><th>用餐</th><th>房間</th>${cps.map(c => `<th style="text-align:center">${esc(c)}</th>`).join('')}<th>備註</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function renderCare() {
+  const sec = $('#sec-care');
+  sec.querySelector('.ph').innerHTML = printHead('特殊照護與飲食');
+  const list = sortedStudents().filter(s => s.diet || s.medical || s.note);
+  const diets = {};
+  state.students.forEach(s => { if (s.diet) diets[s.diet] = (diets[s.diet] || 0) + 1; });
+  $('#careStats').innerHTML = `<span class="stat">需注意 <b class="num">${list.length}</b> 人</span>` +
+    Object.entries(diets).map(([d, n]) => `<span class="stat">${esc(d)} <b class="num">${n}</b></span>`).join('') +
+    `<span class="stat">過敏／醫療 <b class="num">${state.students.filter(s => s.medical).length}</b></span>`;
+  const md = memberOf('dining'), mr = memberOf('rooms'), ma = memberOf('activity');
+  $('#careTable').innerHTML = list.length
+    ? `<thead><tr><th>座號</th><th>姓名</th><th>性別</th><th>飲食</th><th>過敏／醫療</th><th>備註</th><th>活動組</th><th>用餐桌</th><th>房間</th><th>緊急聯絡</th></tr></thead><tbody>` +
+      list.map(s => `<tr class="${gcls(s.gender)}"><td class="num">${esc(s.no)}</td><td class="name nowrap">${esc(s.name)}</td>
+        <td><span class="sex ${gcls(s.gender)}">${gtxt(s.gender)}</span></td><td>${esc(s.diet)}</td><td class="flag">${esc(s.medical)}</td><td>${esc(s.note)}</td>
+        <td class="nowrap">${esc(ma[s.id]?.name)}</td><td class="nowrap">${esc(md[s.id]?.name)}</td><td class="nowrap">${esc(mr[s.id]?.name)}</td>
+        <td class="nowrap">${esc(s.ec1Name)} <span class="num">${esc(s.ec1Phone)}</span></td></tr>`).join('') + '</tbody>'
+    : `<tbody><tr><td class="hint" style="padding:24px;text-align:center">沒有學生填寫飲食、過敏或備註。</td></tr></tbody>`;
+}
+function renderAll() {
+  cleanBoards();
+  document.body.classList.toggle('selecting', !!ui.sel);
+  renderHeader(); renderStudents();
+  Object.keys(BOARDS).forEach(renderBoard);
+  renderContacts(); renderRollcall(); renderCare();
+}
+
+/* ---------- 學生編輯 ---------- */
+let editingId = null;
+function openStudent(id) {
+  editingId = id;
+  const s = id ? stu(id) : { no: String((Math.max(0, ...state.students.map(x => parseFloat(x.no) || 0)) + 1)) };
+  $('#stuDlgTitle').textContent = id ? `編輯：${s.name}` : '新增學生';
+  FIELDS.filter(f => f !== 'gender').forEach(f => { $('#f-' + f).value = s[f] || ''; });
+  $('#f-gM').checked = s.gender === 'M'; $('#f-gF').checked = s.gender === 'F';
+  $('#stuDlg').showModal();
+  $('#f-name').focus();
+}
+$('#stuForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('#f-name').value.trim();
+  if (!name) { toast('請填寫姓名。'); return; }
+  const s = editingId ? stu(editingId) : { id: uid() };
+  FIELDS.filter(f => f !== 'gender').forEach(f => { s[f] = $('#f-' + f).value.trim(); });
+  s.phone = fixPhone(s.phone); s.ec1Phone = fixPhone(s.ec1Phone); s.ec2Phone = fixPhone(s.ec2Phone);
+  const newG = $('#f-gM').checked ? 'M' : $('#f-gF').checked ? 'F' : '';
+  if (editingId && newG !== s.gender) {     // 改了性別就從原本的房間移出
+    state.rooms.groups.forEach(g => { if (g.gender && g.gender !== newG) g.members = g.members.filter(id => id !== s.id); });
+  }
+  s.gender = newG;
+  if (!editingId) state.students.push(s);
+  $('#stuDlg').close();
+  save(); renderAll();
+  toast(editingId ? `已更新 ${s.name}。` : `已新增 ${s.name}，記得到各分組頁把他排進去。`);
+});
+
+/* ---------- 列印 ---------- */
+function doPrint(all) {
+  document.body.classList.toggle('print-all', all);
+  if (!all && ui.tab === 'settings') { toast('「基本資料」沒有需要列印的內容，請切到要印的頁面。'); return; }
+  renderAll();
+  window.print();
+}
+window.addEventListener('afterprint', () => document.body.classList.remove('print-all'));
+
+/* ---------- 事件 ---------- */
+function setTab(k) {
+  ui.tab = k; ui.sel = null;
+  try { history.replaceState(null, '', '#' + k); } catch (e) {}
+  renderAll();
+  window.scrollTo({ top: 0 });
+}
+document.addEventListener('click', async e => {
+  const tab = e.target.closest('.tab');
+  if (tab) { setTab(tab.dataset.tab); return; }
+
+  const a = e.target.closest('[data-act]');
+  if (a) {
+    const k = a.dataset.k;
+    switch (a.dataset.act) {
+      case 'print-one': doPrint(false); break;
+      case 'print-all': doPrint(true); break;
+      case 'add-student': openStudent(null); break;
+      case 'edit-student': openStudent(a.dataset.sid); break;
+      case 'dlg-cancel': $('#stuDlg').close(); break;
+      case 'del-student': {
+        const s = stu(a.dataset.sid);
+        if (await confirmBox(`刪除 ${s.name}？他也會從所有分組中移除。`, '刪除')) {
+          state.students = state.students.filter(x => x.id !== s.id); save(); renderAll();
+        }
+        break;
+      }
+      case 'open-import': $('#importBox').open = true; $('#importBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
+      case 'do-import': doImport(); break;
+      case 'template': exportTemplate(); break;
+      case 'export-csv': exportCsv(); break;
+      case 'auto': {
+        if (!state.students.length) { toast('請先建立學生名單。'); break; }
+        if (state[k].groups.some(g => g.members.length) &&
+            !(await confirmBox(`重新${BOARDS[k].label}會清掉目前的安排，確定嗎？`, '重新分配'))) break;
+        autoAssign(k, document.getElementById(`${k}-mode`).value);
+        save(); renderAll(); toast(`已完成${BOARDS[k].label}，可以再用拖曳微調。`);
+        break;
+      }
+      case 'fill': {
+        const n = unassigned(k).length;
+        if (!n) { toast('所有學生都已分配。'); break; }
+        const created = fillUnassigned(k);
+        save(); renderAll();
+        toast(`已分配 ${n} 人${created ? `，另外新增了 ${created} ${BOARDS[k].unit}` : ''}。`);
+        break;
+      }
+      case 'add-group': {
+        const g = BOARDS[k].gender ? a.dataset.gender : '';
+        const same = state[k].groups.filter(x => !BOARDS[k].gender || x.gender === g).length;
+        state[k].groups.push(newGroup(k, same + 1, g)); save(); renderAll();
+        break;
+      }
+      case 'del-group': state[k].groups = state[k].groups.filter(g => g.id !== a.dataset.gid); save(); renderAll(); break;
+      case 'clear-board':
+        if (await confirmBox(`把「${BOARDS[k].label}」的所有學生移回未分組？組別會保留。`, '移回')) {
+          state[k].groups.forEach(g => { g.members = []; g.leaderId = ''; }); save(); renderAll();
+        }
+        break;
+      case 'clear-sample':
+        state = blankState(); save(); setTab('students');
+        $('#importBox').open = true; break;
+      case 'load-sample':
+        if (state.students.length && !state.isSample &&
+            !(await confirmBox('載入範例會取代目前所有資料，建議先下載備份。確定嗎？', '載入範例'))) break;
+        state = sampleState(); save(); setTab('students'); break;
+      case 'reset-all':
+        if (await confirmBox('清除全部學生、分組與行程資料？此動作無法復原。', '全部清除')) {
+          state = blankState(); save(); renderAll(); toast('已清除全部資料。');
+        }
+        break;
+      case 'backup':
+        download(`${fileStamp()}_校外教學備份.json`, JSON.stringify(state, null, 2), 'application/json');
+        break;
+    }
+    return;
+  }
+
+  const chip = e.target.closest('.chip');
+  if (chip) {
+    const { k, sid } = chip.dataset;
+    ui.sel = ui.sel && ui.sel.sid === sid && ui.sel.k === k ? null : { k, sid };
+    renderAll();
+    return;
+  }
+  const drop = e.target.closest('.drop');
+  if (drop && ui.sel && ui.sel.k === drop.dataset.k) { moveStudent(drop.dataset.k, ui.sel.sid, drop.dataset.gid); return; }
+  if (ui.sel && !e.target.closest('input,select,dialog')) { ui.sel = null; renderAll(); }
+});
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList?.contains('chip')) { e.preventDefault(); e.target.click(); }
+  if (e.key === 'Escape' && ui.sel) { ui.sel = null; renderAll(); }
+});
+
+// 拖曳
+document.addEventListener('dragstart', e => {
+  const chip = e.target.closest?.('.chip'); if (!chip) return;
+  e.dataTransfer.setData('text/plain', JSON.stringify({ k: chip.dataset.k, sid: chip.dataset.sid }));
+  e.dataTransfer.effectAllowed = 'move';
+  chip.classList.add('dragging');
+});
+document.addEventListener('dragend', e => { e.target.classList?.remove('dragging'); });
+document.addEventListener('dragover', e => {
+  const d = e.target.closest?.('.drop'); if (!d) return;
+  e.preventDefault(); d.classList.add('drop-hot');
+});
+document.addEventListener('dragleave', e => {
+  const d = e.target.closest?.('.drop'); if (d && !d.contains(e.relatedTarget)) d.classList.remove('drop-hot');
+});
+document.addEventListener('drop', e => {
+  const d = e.target.closest?.('.drop'); if (!d) return;
+  e.preventDefault(); d.classList.remove('drop-hot');
+  try {
+    const { k, sid } = JSON.parse(e.dataTransfer.getData('text/plain'));
+    if (k === d.dataset.k) moveStudent(k, sid, d.dataset.gid);
+  } catch (err) {}
+});
+
+// 欄位修改
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.trip) { state.trip[el.dataset.trip] = el.value; save(); renderHeader(); return; }
+  if (el.dataset.gname) {
+    const [k, gid] = el.dataset.gname.split(':');
+    const g = state[k].groups.find(x => x.id === gid); if (g) { g.name = el.value; save(); }
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.trip) { renderAll(); return; }
+  if (el.dataset.gname) { renderAll(); return; }
+  if (el.dataset.boardSet) {
+    const [k, prop] = el.dataset.boardSet.split(':');
+    state[k][prop] = Math.max(1, parseInt(el.value, 10) || 1); save(); renderAll(); return;
+  }
+  if (el.dataset.gcap) {
+    const [k, gid] = el.dataset.gcap.split(':');
+    const g = state[k].groups.find(x => x.id === gid);
+    if (g) { g.cap = el.value ? Math.max(1, parseInt(el.value, 10) || 1) : ''; save(); renderAll(); }
+    return;
+  }
+  if (el.dataset.leader) {
+    const [k, gid] = el.dataset.leader.split(':');
+    const g = state[k].groups.find(x => x.id === gid);
+    if (g) { g.leaderId = el.value; save(); renderAll(); }
+    return;
+  }
+  if (el.id === 'rollSort') { renderRollcall(); return; }
+  if (el.id === 'restoreFile' && el.files[0]) {
+    el.files[0].text().then(async txt => {
+      try {
+        const next = normalizeState(JSON.parse(txt));
+        if (!(await confirmBox(`還原備份（${next.students.length} 位學生）會取代目前資料，確定嗎？`, '還原'))) return;
+        state = next; save(); renderAll(); toast('已從備份還原。');
+      } catch (err) { toast('這不是本工具的備份檔，無法還原。'); }
+      el.value = '';
+    });
+  }
+});
+
+/* ---------- 範例資料 ---------- */
+function sampleState() {
+  const s = blankState();
+  s.isSample = true;
+  Object.assign(s.trip, { title: '六年級校外教學', date: '2026/11/12–11/13', place: '六福村主題樂園、台中科博館', cls: '六年三班',
+    school: '範例國小', teacher: '林老師', teacherPhone: '0900-000-000', hotel: '範例渡假飯店 03-000-0000',
+    staff: '領隊 王小姐 0900-000-001\n隨隊護理師 陳老師 0900-000-002\n遊覽車 1 號車 司機 張先生 0900-000-003' });
+  const boys = ['陳柏翰','林冠宇','黃宥廷','張承恩','李品睿','王宇軒','吳柏諺','劉家豪','蔡承翰','楊子睿','許哲瑋','鄭宇恩','謝定宸'];
+  const girls = ['陳品妤','林語彤','黃子晴','張芯瑜','李宥蓁','王思妤','吳亭妤','劉以涵','蔡沛恩','楊雨潔','許詠晴','鄭可欣'];
+  const extra = { 3: { medical: '花生過敏（隨身攜帶藥物）' }, 7: { diet: '蛋奶素' }, 15: { diet: '蛋奶素' },
+    10: { medical: '氣喘，備有吸入劑' }, 18: { note: '容易暈車，坐前排' }, 21: { diet: '不吃牛' }, 24: { medical: '蝦蟹過敏' } };
+  let no = 0;
+  for (const [g, list] of [['M', boys], ['F', girls]]) {
+    list.forEach(name => {
+      no++;
+      const sur = name[0], p = String(no).padStart(3, '0');
+      s.students.push(Object.assign({ id: uid(), no: String(no), name, gender: g, phone: no % 3 ? `0911-000-${p}` : '',
+        ec1Name: `${sur}爸爸`, ec1Rel: '父', ec1Phone: `0922-000-${p}`, ec2Name: `${sur}媽媽`, ec2Rel: '母', ec2Phone: `0933-000-${p}`,
+        diet: '', medical: '', note: '' }, extra[no] || {}));
+    });
+  }
+  state = s;
+  autoAssign('activity', 'no'); autoAssign('dining', 'no'); autoAssign('rooms', 'no');
+  s.activity.groups.forEach(g => { g.leaderId = g.members[0]; });
+  return s;
+}
+
+/* ---------- 啟動 ---------- */
+state = load() || sampleState();
+const fromHash = location.hash.slice(1);
+if (TABS.some(([k]) => k === fromHash)) ui.tab = fromHash;
+renderAll();
+save();
+</script>
+</body>
+</html>
