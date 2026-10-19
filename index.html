@@ -256,22 +256,22 @@ body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%,
 .seat.aisle { grid-column: 3; }
 
 /* ---------- 學生小卡（名片大小 9 × 5.4 cm） ---------- */
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
 .scard {
-  aspect-ratio: 90 / 54; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
-  display: flex; flex-direction: column; padding: 8px 12px 8px 16px; position: relative; overflow: hidden; gap: 2px;
+  max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  display: flex; flex-direction: column; padding: 6px 10px 6px 14px; position: relative; overflow: hidden; gap: 1px;
 }
 .scard::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 7px; background: var(--g-line); }
 .scard-top { display: flex; justify-content: space-between; gap: 8px; font-size: .78rem; color: var(--muted); font-weight: 700; }
 .scard-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scard-name { display: flex; align-items: baseline; gap: 8px; font-size: 1.55rem; font-weight: 900; color: var(--g-ink); line-height: 1.25; }
+.scard-name { display: flex; align-items: baseline; gap: 8px; font-size: 1.35rem; font-weight: 900; color: var(--g-ink); line-height: 1.25; }
 .scard-name .num { font-size: 1.2rem; }
 .scard-cls { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
-.scard-info { margin: 0; display: grid; gap: 0; flex: 1; align-content: center; }
-.scard-info div { display: flex; gap: 8px; font-size: 1.05rem; min-width: 0; line-height: 1.45; }
+.scard-info { margin: 0; display: grid; gap: 0; flex: 1; align-content: start; }
+.scard-info div { display: flex; gap: 8px; font-size: .95rem; min-width: 0; line-height: 1.35; }
 .scard-info dt { color: var(--muted); white-space: nowrap; width: 3.6em; flex: none; }
 .scard-info dd { margin: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.scard-note { font-size: .78rem; border-top: 1px dashed var(--line); padding-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scard-note { font-size: .78rem; border-top: 1px dashed var(--line); padding-top: 3px; overflow: hidden; }
 
 /* ---------- 設定頁 ---------- */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; }
@@ -370,7 +370,8 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   .itin-panel { border: 0; padding: 0; }
   #sec-cards .print-head { display: none; }
   #sec-cards .cards { grid-template-columns: repeat(2, 90mm); grid-auto-rows: 54mm; gap: 0; justify-content: center; }
-  .scard { aspect-ratio: auto; width: 90mm; height: 54mm; border: 1px dashed #888; border-radius: 0; break-inside: avoid; padding: 2.5mm 3.5mm 2.5mm 5mm; }
+  .scard-info { align-content: center; }
+  .scard { width: 90mm; height: 54mm; border: 1px dashed #888; border-radius: 0; break-inside: avoid; padding: 2.5mm 3.5mm 2.5mm 5mm; }
   .scard::before { width: 2.2mm; }
   .scard-top { font-size: 7.5pt; }
   .scard-name { font-size: 20pt; }
