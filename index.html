@@ -595,7 +595,7 @@ function save() {
   }
 }
 
-const ui = { tab: 'students', sel: null };
+const ui = { tab: 'students', sel: null, lastAuto: {} };
 let state;
 
 /* ---------- 小工具 ---------- */
@@ -1066,8 +1066,7 @@ function renderBoard(k) {
   const cfg = BOARDS[k], b = state[k];
   const sec = document.querySelector(`[data-board="${k}"]`);
   const pool = unassigned(k);
-  const modeId = `${k}-mode`;
-  const prevMode = document.getElementById(modeId)?.value || 'no';
+  const verb = k === 'rooms' ? '分房' : k === 'dining' ? '排桌' : '分組';
   const sizeCtl = k === 'activity'
     ? `<label class="inline">組數 <input type="number" min="1" max="60" id="activity-n" data-board-set="activity:n" value="${esc(b.n)}"></label>`
     : `<label class="inline">每${cfg.unit === '桌' ? '桌' : '間'} <input type="number" min="1" max="40" id="${k}-cap" data-board-set="${k}:cap" value="${esc(b.cap)}"> 人</label>`;
@@ -1118,8 +1117,8 @@ function renderBoard(k) {
   sec.innerHTML = `${printHead(cfg.label)}
     <div class="toolbar">
       ${sizeCtl}
-      <label class="inline">順序 <select id="${modeId}"><option value="no">依座號</option><option value="random">隨機</option></select></label>
-      <button class="btn primary" type="button" data-act="auto" data-k="${k}">自動${k === 'rooms' ? '分房（男女分開）' : k === 'dining' ? '排桌' : '分組'}</button>
+      <button class="btn" type="button" data-act="auto" data-mode="no" data-k="${k}">依座號${verb}</button>
+      <button class="btn primary" type="button" data-act="auto" data-mode="random" data-k="${k}" title="每按一次重新隨機一次">隨機${verb}</button>
       <button class="btn" type="button" data-act="fill" data-k="${k}">只分配未分組的人</button>
       ${addBtns}
       <span class="sep"></span>
@@ -1135,7 +1134,6 @@ function renderBoard(k) {
       </aside>
       <div class="groups">${cards || `<p class="hint">還沒有${cfg.label.replace('分組', '')}的組別。設定好人數後按「自動${k === 'rooms' ? '分房' : k === 'dining' ? '排桌' : '分組'}」。</p>`}</div>
     </div>`;
-  document.getElementById(modeId).value = prevMode;
 }
 function renderBus() {
   const B = state.bus, sec = $('#sec-bus'), pool = unassigned('bus');
@@ -1171,8 +1169,9 @@ function renderBus() {
       <label class="inline">每車 <input type="number" min="2" max="20" id="bus-rows" data-board-set="bus:rows" value="${esc(B.rows)}"> 排</label>
       <label class="inline"><input type="checkbox" id="bus-back5" data-bus-opt="back5"${B.back5 ? ' checked' : ''}> 最後一排 5 人座</label>
       <label class="inline"><input type="checkbox" id="bus-same" data-bus-opt="sameGender"${B.sameGender ? ' checked' : ''}> 同性別坐一起</label>
-      <label class="inline">順序 <select id="bus-mode"><option value="no">依座號</option><option value="random">隨機</option><option value="activity">依活動組</option></select></label>
-      <button class="btn primary" type="button" data-act="auto" data-k="bus">自動排座</button>
+      <label class="inline">順序 <select id="bus-mode"><option value="no">依座號</option><option value="activity">依活動組</option></select></label>
+      <button class="btn" type="button" data-act="auto" data-k="bus">自動排座</button>
+      <button class="btn primary" type="button" data-act="auto" data-mode="random" data-k="bus" title="每按一次重新隨機一次">隨機排座</button>
       <button class="btn" type="button" data-act="fill" data-k="bus">只排未入座的人</button>
       <span class="sep"></span>
       <button class="btn ghost danger" type="button" data-act="clear-board" data-k="bus">全部移回未分組</button>
@@ -1295,10 +1294,15 @@ document.addEventListener('click', async e => {
       case 'export-csv': exportCsv(); break;
       case 'auto': {
         if (!state.students.length) { toast('請先建立學生名單。'); break; }
-        if (state[k].groups.some(g => membersOf(k, g).length) &&
+        // 剛自動分好、還沒手動調整過，就直接重新分配（方便一直按「隨機」重抽）
+        const untouched = ui.lastAuto[k] === JSON.stringify(state[k].groups);
+        if (!untouched && state[k].groups.some(g => membersOf(k, g).length) &&
             !(await confirmBox(`重新${BOARDS[k].label}會清掉目前的安排，確定嗎？`, '重新分配'))) break;
-        autoAssign(k, document.getElementById(`${k}-mode`).value);
-        save(); renderAll(); toast(`已完成${BOARDS[k].label}，可以再用拖曳微調。`);
+        const mode = a.dataset.mode || document.getElementById(`${k}-mode`)?.value || 'no';
+        autoAssign(k, mode);
+        ui.lastAuto[k] = JSON.stringify(state[k].groups);
+        save(); renderAll();
+        toast(`已${mode === 'random' ? '隨機' : '依' + (mode === 'activity' ? '活動組' : '座號')}完成${BOARDS[k].label}，可以再用拖曳微調。`);
         break;
       }
       case 'fill': {
