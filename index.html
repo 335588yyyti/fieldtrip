@@ -235,12 +235,18 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 .seat .sl { font-family: var(--font-mono); font-size: .66rem; color: var(--muted); line-height: 1; }
 .seat .chip { padding: 2px 5px; font-size: .82rem; gap: 3px; justify-content: center; white-space: nowrap; overflow: hidden; }
 .seat .chip .no { font-size: .7rem; }
-.bus-door {
-  grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center;
-  font-size: .75rem; font-weight: 700; letter-spacing: .06em; color: var(--warn);
-  border-block: 1px dashed var(--warn); padding: 1px 2px; margin-block: 2px;
+.door-cell {
+  grid-column: span 2; display: grid; place-items: center; min-height: 46px;
+  border: 1.5px dashed var(--muted); border-radius: 6px; color: var(--muted); font-weight: 700; font-size: .85rem; letter-spacing: .1em;
 }
-.bus-door span:empty { visibility: hidden; }
+.back-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: inherit; }
+.back-row .seat.aisle { grid-column: auto; }
+.row-no { display: grid; place-items: center; font-family: var(--font-mono); font-size: .78rem; color: var(--muted); }
+.seat { position: relative; }
+.seat .rv-in { width: 100%; font-size: .8rem; text-align: center; padding: 1px 2px; border-color: transparent; background: transparent; font-weight: 700; }
+.seat .rv-in:hover, .seat .rv-in:focus { border-color: var(--line); background: var(--surface); }
+.seat .rv-x { position: absolute; top: 0; right: 2px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: .9rem; line-height: 1; padding: 2px; }
+.seat .rv-x:hover { color: var(--warn); }
 .seat.reserved { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--line) 6px 7px); }
 .seat.reserved .rv { font-size: .78rem; color: var(--muted); text-align: center; font-weight: 700; }
 .seat.empty .rv { font-size: .72rem; color: var(--muted); text-align: center; opacity: .6; }
@@ -344,8 +350,19 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   .bus-card + .bus-card { break-before: page; }
   .bus-card { border: 0; }
   .bus-grid { gap: 4px; border-color: #555; }
-  .seat { min-height: 15mm; background: #fff; border-color: #777; }
-  .seat .chip { font-size: 11pt; border-width: 1px; }
+  .bus-grid { border: 2.5px solid #222; border-radius: 10mm 10mm 6mm 6mm; padding: 5mm 4mm 4mm; gap: 2.2mm 2mm; }
+  .bus-front { border: 0; justify-content: space-between; color: #555; letter-spacing: .3em; }
+  .seat { min-height: 15mm; background: #fff; border: 1.2px solid #bbb; border-radius: 2mm; }
+  .seat .sl { font-size: 7pt; color: #444; }
+  .seat.empty .rv { visibility: hidden; }
+  .seat.taken { border: 2px solid #333; background: var(--g-bg); }
+  .seat .chip { background: none; border: 0; color: #000; font-size: 13pt; font-weight: 700; padding: 0; }
+  .seat .chip .no { font-size: 13pt; opacity: 1; font-family: var(--font-body); }
+  .seat .chip .mark { font-size: 9pt; }
+  .row-no { font-size: 9pt; color: #555; }
+  .seat.reserved { background: #fff; border: 2px solid #333; }
+  .seat.reserved .rv { font-size: 11pt; color: #000; }
+  .door-cell { min-height: 14mm; border-color: #999; color: #555; }
   .card-notes { color: var(--warn); }
   .notice { border: 1px solid var(--warn); }
   footer.foot { display: none; }
@@ -586,7 +603,7 @@ const BOARDS = {
     extraLabel:'過敏／醫療', extra: s => s.medical,
     help:'男女分房，不同性別的學生不能放進同一間。每間人數可調整，房號可以直接改名稱。' },
   bus: { label:'遊覽車座位', unit:'車', hasCap:false, gender:false, leader:false, seats:true,
-    help:'座位圖上方是車頭（左邊司機、右邊前門），安全門在左側、後門在右側，位置可在上方調整（填 0 不顯示）。先點學生再點座位就能入座，點已有人的座位會互換。沒選學生時點空位，可以標成「老師／保留」。' },
+    help:'座位依實際車型由前往後編號，門的位置會佔掉該排一側的座位，可在上方調整（填 0 表示沒有）。先點學生再點座位就能入座，點已有人的座位會互換。沒選學生時點空位，可以設為保留，並輸入老師姓名。' },
 };
 /* 各分組頁要註明的特殊需求：素食與食物過敏放用餐，暈車放遊覽車，醫療狀況放活動與房間 */
 const FOOD_RE = /過敏|不吃|忌|乳糖|麩質|素/;
@@ -614,7 +631,7 @@ function blankState() {
     activity: { n: 6, groups: [] },
     dining: { cap: 10, groups: [] },
     rooms: { cap: 4, groups: [] },
-    bus: { n: 1, rows: 10, back5: true, sameGender: true, safeDoor: 6, backDoor: 8, groups: [] },
+    bus: { n: 1, rows: 12, back5: true, sameGender: true, frontDoor: true, safeDoor: 7, backDoor: 8, groups: [] },
     itinerary: [],
     isSample: false,
   };
@@ -635,7 +652,8 @@ function normalizeState(s) {
     activity: Object.assign(b.activity, s.activity || {}),
     dining: Object.assign(b.dining, s.dining || {}),
     rooms: Object.assign(b.rooms, s.rooms || {}),
-    bus: Object.assign(b.bus, s.bus || {}),
+    // 舊版座位設定沒有前門欄位，換成新的 43 人座預設
+    bus: Object.assign(b.bus, s.bus && s.bus.frontDoor === undefined ? Object.assign({}, s.bus, { rows: 12, safeDoor: 7, backDoor: 8, frontDoor: true }) : s.bus || {}),
     itinerary: Array.isArray(s.itinerary) ? s.itinerary : [],
     isSample: !!s.isSample,
   };
@@ -826,13 +844,24 @@ function fillUnassigned(k) {
 }
 
 /* ---------- 遊覽車 ---------- */
-function busLayout() {
-  const R = Math.max(2, Number(state.bus.rows) || 10);
+// 每一排：左側 A B、走道、右側 C D；最後一排可為 5 人座（中間 M）。
+// 門會佔掉該排一側的兩個座位：前門在第 1 排右側、安全門在左側、後車門在右側。
+function busRows() {
+  const B = state.bus, R = Math.max(2, Number(B.rows) || 12);
   const rows = [];
-  for (let r = 1; r <= R; r++) rows.push((r === R && state.bus.back5 ? ['A','B','M','C','D'] : ['A','B','C','D']).map(L => r + L));
+  for (let r = 1; r <= R; r++) {
+    if (r === R && B.back5) { rows.push({ r, back: true, seats: ['A', 'B', 'M', 'C', 'D'].map(L => r + L) }); continue; }
+    const left = Number(B.safeDoor) === r ? '安全門' : [r + 'A', r + 'B'];
+    const right = r === 1 && B.frontDoor ? '前門' : Number(B.backDoor) === r ? '後車門' : [r + 'C', r + 'D'];
+    rows.push({ r, left, right, seats: [left, right].filter(Array.isArray).flat() });
+  }
   return rows;
 }
-const busCap = b => busLayout().flat().filter(x => b.seats[x] !== '#R').length;
+const busLayout = () => busRows().map(row => row.seats);
+function seatNumbers() {   // 座位編號 1、2、3…，由前往後、由左往右
+  const m = {}; busLayout().flat().forEach((id, i) => { m[id] = i + 1; }); return m;
+}
+const busCap = b => busLayout().flat().filter(x => !String(b.seats[x] || '').startsWith('#')).length;
 function newBus(i) { return { id: uid(), name: `${i} 號車`, seats: { '1A': '#R', '1B': '#R' } }; }
 function seatOf(sid) {
   for (const b of state.bus.groups) for (const [seat, v] of Object.entries(b.seats)) if (v === sid) return { b, seat };
@@ -863,16 +892,15 @@ function seatStudent(sid, busId, seat) {
 }
 function toggleReserve(busId, seat) {
   const b = state.bus.groups.find(x => x.id === busId); if (!b) return;
-  if (!b.seats[seat]) b.seats[seat] = '#R';
-  else if (b.seats[seat] === '#R') delete b.seats[seat];
-  else return;
+  if (b.seats[seat]) return;   // 只有空位可以設為保留；取消保留用座位上的 ×
+  b.seats[seat] = '#R';
   save(); renderAll();
 }
 function busSlots(b) {
   // 兩兩相鄰的座位為一組（A-B、C-D），最後一排中間 M 單獨；保留座位不排
   const slots = [];
   busLayout().forEach(row => {
-    const pairs = row.length === 5 ? [[row[0], row[1]], [row[2]], [row[3], row[4]]] : [[row[0], row[1]], [row[2], row[3]]];
+    const pairs = [row.filter(x => /[AB]$/.test(x)), row.filter(x => x.endsWith('M')), row.filter(x => /[CD]$/.test(x))].filter(p => p.length);
     pairs.forEach(pr => { const free = pr.filter(x => !b.seats[x]); if (free.length) slots.push({ b, seats: free }); });
   });
   return slots;
@@ -1174,7 +1202,7 @@ function exportTemplate() {
 }
 
 /* ---------- 畫面 ---------- */
-function busSeatText(sid) { const x = seatOf(sid); return x ? `${x.b.name} ${x.seat}` : ''; }
+function busSeatText(sid) { const x = seatOf(sid); return x ? `${x.b.name} ${seatNumbers()[x.seat] || ''} 號座` : ''; }
 function printHead(title) {
   const t = state.trip;
   const meta = [t.date && `日期 ${t.date}`, t.place && `地點 ${t.place}`, (t.school || t.cls) && `${t.school} ${t.cls}`.trim()].filter(Boolean).join('　');
@@ -1322,21 +1350,23 @@ function renderBoard(k) {
 function renderBus() {
   const B = state.bus, sec = $('#sec-bus'), pool = unassigned('bus');
   const prevMode = document.getElementById('bus-mode')?.value || 'no';
+  const nums = seatNumbers();
   const cards = B.groups.map(b => {
     const mem = membersOf('bus', b).map(stu).filter(Boolean);
     const seat = id => {
-      const v = b.seats[id], s = v && v[0] !== '#' ? stu(v) : null;
-      const cls = v === '#R' ? ' reserved' : s ? '' : ' empty';
-      const body = s ? chipHTML('bus', s, null) : `<span class="rv">${v === '#R' ? '保留' : '空位'}</span>`;
-      return `<div class="seat drop${cls}${id.endsWith('M') ? ' aisle' : ''}" data-k="bus" data-gid="${b.id}" data-seat="${id}" title="${v === '#R' ? '保留座位（點一下取消）' : s ? '' : '空位（沒選學生時點一下可設為保留）'}"><span class="sl">${id}</span>${body}</div>`;
+      const v = String(b.seats[id] || ''), s = v && v[0] !== '#' ? stu(v) : null, rsv = v.startsWith('#');
+      const label = rsv ? v.slice(3) : '';
+      const body = s ? chipHTML('bus', s, null)
+        : rsv ? `<input type="text" class="rv-in no-print" id="rv-${b.id}-${id}" data-rv="${b.id}:${id}" value="${esc(label)}" placeholder="保留" aria-label="保留座位說明，例如老師姓名">
+            <span class="rv print-only">${esc(label || '保留')}</span>
+            <button class="rv-x no-print" type="button" data-act="unreserve" data-gid="${b.id}" data-seat="${id}" title="取消保留" aria-label="取消保留">×</button>`
+        : '<span class="rv">空位</span>';
+      return `<div class="seat drop${rsv ? ' reserved' : s ? ' taken ' + gcls(s.gender) : ' empty'}${id.endsWith('M') ? ' aisle' : ''}" data-k="bus" data-gid="${b.id}" data-seat="${id}"
+        title="${rsv ? '保留座位，可輸入老師姓名' : s ? '' : '空位（沒選學生時點一下可設為保留）'}"><span class="sl">${nums[id]}</span>${body}</div>`;
     };
-    // 安全門在左側、後門在右側，畫在指定排的前面
-    const door = r => {
-      const safe = Number(B.safeDoor) === r, back = Number(B.backDoor) === r;
-      return safe || back ? `<div class="bus-door"><span>${safe ? '◀ 安全門' : ''}</span><span>${back ? '後門 ▶' : ''}</span></div>` : '';
-    };
-    const grid = busLayout().map((row, i) => door(i + 1) + (row.length === 5 ? row.map(seat).join('')
-      : seat(row[0]) + seat(row[1]) + '<div></div>' + seat(row[2]) + seat(row[3]))).join('');
+    const side = part => Array.isArray(part) ? part.map(seat).join('') : `<div class="door-cell">${part}</div>`;
+    const grid = busRows().map(row => row.back ? `<div class="back-row">${row.seats.map(seat).join('')}</div>`
+      : side(row.left) + `<div class="row-no">${row.r}</div>` + side(row.right)).join('');
     return `<div class="card bus-card" data-gid="${b.id}">
       <div class="card-h">
         <input type="text" class="gname" id="gname-${b.id}" data-gname="bus:${b.id}" value="${esc(b.name)}" aria-label="車名">
@@ -1344,7 +1374,7 @@ function renderBus() {
         <span class="count">${mem.length}/${busCap(b)} 人</span>
         <button class="btn sm ghost" type="button" data-act="del-group" data-k="bus" data-gid="${b.id}" title="刪除這台車（學生回到未分組）" aria-label="刪除 ${esc(b.name)}">✕</button>
       </div>
-      <div class="bus-grid"><div class="bus-front"><span>司機</span><span>車頭</span><span>前門</span></div>${grid}</div>
+      <div class="bus-grid"><div class="bus-front"><span>司機</span><span>▼ 車頭方向 ▼</span><span></span></div>${grid}</div>
       ${notesHTML('bus', mem)}
     </div>`;
   }).join('');
@@ -1352,8 +1382,9 @@ function renderBus() {
     <div class="toolbar">
       <label class="inline">車數 <input type="number" min="1" max="20" id="bus-n" data-board-set="bus:n" value="${esc(B.n)}"></label>
       <label class="inline">每車 <input type="number" min="2" max="20" id="bus-rows" data-board-set="bus:rows" value="${esc(B.rows)}"> 排</label>
-      <label class="inline" title="安全門在車身左側；填 0 表示不顯示">安全門 第 <input type="number" min="0" max="20" id="bus-safe" data-bus-num="safeDoor" value="${esc(B.safeDoor)}"> 排前</label>
-      <label class="inline" title="後門在車身右側；填 0 表示不顯示">後門 第 <input type="number" min="0" max="20" id="bus-backdoor" data-bus-num="backDoor" value="${esc(B.backDoor)}"> 排前</label>
+      <label class="inline"><input type="checkbox" id="bus-front" data-bus-opt="frontDoor"${B.frontDoor ? ' checked' : ''}> 前門在第 1 排右側</label>
+      <label class="inline" title="安全門佔用該排左側兩個座位；填 0 表示沒有">安全門 第 <input type="number" min="0" max="20" id="bus-safe" data-bus-num="safeDoor" value="${esc(B.safeDoor)}"> 排左側</label>
+      <label class="inline" title="後車門佔用該排右側兩個座位；填 0 表示沒有">後車門 第 <input type="number" min="0" max="20" id="bus-backdoor" data-bus-num="backDoor" value="${esc(B.backDoor)}"> 排右側</label>
       <label class="inline"><input type="checkbox" id="bus-back5" data-bus-opt="back5"${B.back5 ? ' checked' : ''}> 最後一排 5 人座</label>
       <label class="inline"><input type="checkbox" id="bus-same" data-bus-opt="sameGender"${B.sameGender ? ' checked' : ''}> 同性別坐一起</label>
       <label class="inline">順序 <select id="bus-mode"><option value="no">依座號</option><option value="activity">依活動組</option></select></label>
@@ -1532,6 +1563,11 @@ document.addEventListener('click', async e => {
           state = blankState(); save(); renderAll(); toast('已清除全部資料。');
         }
         break;
+      case 'unreserve': {
+        const b = state.bus.groups.find(x => x.id === a.dataset.gid);
+        if (b) { delete b.seats[a.dataset.seat]; save(); renderAll(); }
+        break;
+      }
       case 'itin-paste': openItinImport(null); break;
       case 'itin-cancel': $('#itinDlg').close(); break;
       case 'itin-template': exportItinTemplate(); break;
@@ -1567,7 +1603,7 @@ document.addEventListener('click', async e => {
   }
   const drop = e.target.closest('.drop');
   if (drop && ui.sel && ui.sel.k === drop.dataset.k) { moveStudent(drop.dataset.k, ui.sel.sid, drop.dataset.gid, drop.dataset.seat); return; }
-  if (drop && !ui.sel && drop.dataset.seat) { toggleReserve(drop.dataset.gid, drop.dataset.seat); return; }
+  if (drop && !ui.sel && drop.dataset.seat && !e.target.closest('input')) { toggleReserve(drop.dataset.gid, drop.dataset.seat); return; }
   if (ui.sel && !e.target.closest('input,select,dialog')) { ui.sel = null; renderAll(); }
 });
 document.addEventListener('keydown', e => {
@@ -1603,6 +1639,12 @@ document.addEventListener('drop', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.trip) { state.trip[el.dataset.trip] = el.value; save(); renderHeader(); return; }
+  if (el.dataset.rv) {
+    const [gid, seat] = el.dataset.rv.split(':');
+    const b = state.bus.groups.find(x => x.id === gid);
+    if (b) { b.seats[seat] = el.value.trim() ? '#R:' + el.value.trim() : '#R'; save(); }
+    return;
+  }
   if (el.dataset.itin) {
     const [id, f] = el.dataset.itin.split(':');
     const x = state.itinerary.find(y => y.id === id); if (x) { x[f] = el.value; save(); }
@@ -1632,7 +1674,7 @@ document.addEventListener('change', e => {
   }
   if (el.dataset.busNum) { state.bus[el.dataset.busNum] = Math.max(0, parseInt(el.value, 10) || 0); save(); renderAll(); return; }
   if (el.dataset.busOpt) { state.bus[el.dataset.busOpt] = el.checked; save(); renderAll(); return; }
-  if (el.dataset.itin) { renderAll(); return; }
+  if (el.dataset.itin || el.dataset.rv) { renderAll(); return; }
   if (el.id === 'itinFile' && el.files[0]) {
     const f = el.files[0]; el.value = '';
     readImportFile(f).then(openItinImport).catch(err => toast(`${err.message}。沒有網路時請改用 CSV 或直接貼上。`));
