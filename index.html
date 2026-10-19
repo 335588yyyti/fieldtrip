@@ -380,6 +380,7 @@ dialog {
 dialog::backdrop { background: rgb(0 0 0 / .45); }
 dialog form { display: grid; gap: 14px; padding: 18px; }
 dialog h3 { font-size: 1.1rem; }
+#confirmMsg { white-space: pre-line; line-height: 1.6; font-weight: 500; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 fieldset { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px 12px; margin: 0; }
 legend { font-size: .82rem; font-weight: 700; color: var(--muted); padding: 0 4px; }
@@ -588,7 +589,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       <div class="import-body">
         <ol>
           <li>可直接選 Excel 檔（.xlsx）或 CSV，也可以從 Excel 選取整個表格後複製，貼到下方框框。</li>
-          <li>第一列放欄位名稱，系統會自動辨認：<code>座號</code> <code>姓名</code> <code>性別</code> <code>學生手機</code> <code>緊急聯絡人1</code> <code>關係1</code> <code>電話1</code> <code>緊急聯絡人2</code> <code>關係2</code> <code>電話2</code> <code>飲食</code> <code>過敏/醫療</code> <code>備註</code>。沒有的欄位可以省略。</li>
+          <li>第一列可以放欄位名稱，系統會自動辨認：<code>座號</code> <code>姓名</code> <code>性別</code> <code>學生手機</code> <code>緊急聯絡人1</code> <code>關係1</code> <code>電話1</code> <code>緊急聯絡人2</code> <code>關係2</code> <code>電話2</code> <code>飲食</code> <code>過敏/醫療</code> <code>備註</code>。沒有的欄位直接不放即可。<b>沒有標題列也可以</b>，系統會依內容判斷（座號、姓名、性別、電話、家長姓名、關係），匯入前會先讓你確認。</li>
           <li>性別填「男／女」即可。Excel 把手機開頭的 0 吃掉也沒關係，匯入時會自動補回。</li>
         </ol>
         <div class="row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
@@ -1355,7 +1356,7 @@ function parseDelimited(text) {
 }
 const normH = s => String(s ?? '').toLowerCase().replace(/[\s（）()：:_\-.。]/g, '');
 function rowsToStudents(rows) {
-  if (!rows.length) return [];
+  if (!rows.length) return { list: [], cols: [] };
   const lookup = {};
   for (const [f, list] of Object.entries(ALIAS)) list.forEach(a => { lookup[normH(a)] = f; });
   const head = rows[0].map(normH);
@@ -1373,14 +1374,67 @@ function rowsToStudents(rows) {
   });
   let body = rows;
   if (Object.keys(idx).length >= 2 && idx.name !== undefined) body = rows.slice(1);
-  else FIELDS.forEach((f, i) => { idx[f] = i; });
-  return body.map(r => {
+  else Object.assign(idx, guessColumns(rows));   // 沒有標題列：依內容判斷每一欄
+  const width = Math.max(...rows.map(r => r.length));
+  const cols = Array.from({ length: width }, (_, i) => { const f = Object.keys(idx).find(k => idx[k] === i); return f ? LABELS[f] : '（略過）'; });
+  const list = body.map(r => {
     const s = { id: uid() };
     FIELDS.forEach(f => { s[f] = idx[f] !== undefined ? String(r[idx[f]] ?? '').trim() : ''; });
     s.gender = parseGender(s.gender);
     s.phone = fixPhone(s.phone); s.ec1Phone = fixPhone(s.ec1Phone); s.ec2Phone = fixPhone(s.ec2Phone);
     return s;
   }).filter(s => s.name);
+  return { list, cols };
+}
+// 依每一欄的內容猜欄位：座號、姓名、性別、電話、關係；學生後面的「姓名＋電話」視為緊急聯絡人
+const REL_WORDS = ['父', '母', '父親', '母親', '爸爸', '媽媽', '爸', '媽', '祖父', '祖母', '外公', '外婆', '爺爺', '奶奶', '阿公', '阿嬤', '阿媽',
+  '叔叔', '伯伯', '阿姨', '姑姑', '舅舅', '哥哥', '姊姊', '姐姐', '兄', '姊', '監護人', '其他', '親戚', '繼父', '繼母'];
+function cellType(v) {
+  v = String(v ?? '').trim();
+  if (!v) return '';
+  if (/^\d{1,3}$/.test(v) && Number(v) <= 300) return 'no';
+  if (/^(男|女|男生|女生|m|f|male|female|boy|girl)$/i.test(v)) return 'gender';
+  const digits = v.replace(/[^\d]/g, '');
+  if (/^[+\d\-\s()#轉]+$/.test(v) && digits.length >= 8 && digits.length <= 12) return 'phone';
+  if (REL_WORDS.includes(v)) return 'rel';
+  if (/^[\u3400-\u9fff][\u3400-\u9fff·．‧]{1,5}$/.test(v)) return 'name';
+  return 'text';
+}
+function guessColumns(rows) {
+  const width = Math.max(...rows.map(r => r.length));
+  const types = Array.from({ length: width }, (_, i) => {
+    const count = {};
+    rows.forEach(r => { const t = cellType(r[i]); if (t) count[t] = (count[t] || 0) + 1; });
+    const total = Object.values(count).reduce((a, b) => a + b, 0);
+    const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
+    return best && best[1] / total >= 0.6 ? best[0] : (total ? 'text' : '');
+  });
+  const idx = {};
+  let c = 0;   // 目前是第幾位緊急聯絡人
+  const ec = f => `ec${c}${f}`;
+  const next = () => { c++; return c <= 2; };
+  types.forEach((t, i) => {
+    if (t === 'no' && idx.no === undefined && idx.name === undefined) idx.no = i;
+    else if (t === 'gender' && idx.gender === undefined) idx.gender = i;
+    else if (t === 'name') {
+      if (idx.name === undefined) idx.name = i;
+      else if (c > 0 && c <= 2 && idx[ec('Name')] === undefined && idx[ec('Phone')] === undefined) idx[ec('Name')] = i;
+      else if (next()) idx[ec('Name')] = i;
+    } else if (t === 'rel') {
+      if (c > 0 && c <= 2 && idx[ec('Rel')] === undefined && idx[ec('Phone')] === undefined) idx[ec('Rel')] = i;
+      else if (next()) idx[ec('Rel')] = i;
+    } else if (t === 'phone') {
+      if (c === 0 && idx.phone === undefined) idx.phone = i;
+      else if (c > 0 && c <= 2 && idx[ec('Phone')] === undefined) idx[ec('Phone')] = i;
+      else if (next()) idx[ec('Phone')] = i;
+    } else if (t === 'text') {
+      const col = rows.map(r => String(r[i] ?? '')).join(' ');
+      if (idx.diet === undefined && /素|葷|不吃|飲食/.test(col)) idx.diet = i;
+      else if (idx.medical === undefined && /過敏|氣喘|藥|病|癲癇|心臟/.test(col)) idx.medical = i;
+      else if (idx.note === undefined) idx.note = i;
+    }
+  });
+  return idx;
 }
 function decodeText(buf) {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
@@ -1417,13 +1471,18 @@ async function doImport() {
   } catch (e) {
     toast(`${e.message}。沒有網路時請改用 CSV 或直接貼上。`); return;
   }
-  const list = rowsToStudents(rows);
-  if (!list.length) { toast('沒有讀到任何學生，請確認第一列有「姓名」欄位。'); return; }
+  const { list, cols } = rowsToStudents(rows);
+  if (!list.length) { toast('沒有讀到任何學生，請確認有「姓名」這一欄。'); return; }
   const replace = $('#im-replace').checked;
-  if (replace && state.students.length) {
-    const ok = await confirmBox(`將以 ${list.length} 位學生取代目前的 ${state.students.length} 位，並清空所有分組。確定嗎？`, '取代');
-    if (!ok) return;
-  }
+  const s0 = list[0];
+  const contact = (n, p) => [n, p].filter(Boolean).join(' ');
+  const msg = [`讀到 ${list.length} 位學生。`,
+    `欄位判斷：${cols.join('｜')}`,
+    `第一位：${s0.no} ${s0.name}${s0.gender ? `（${gtxt(s0.gender)}）` : ''}${s0.phone ? `，手機 ${s0.phone}` : ''}` +
+      `${contact(s0.ec1Name, s0.ec1Phone) ? `，聯絡人 ${contact(s0.ec1Name, s0.ec1Phone)}` : ''}${contact(s0.ec2Name, s0.ec2Phone) ? `、${contact(s0.ec2Name, s0.ec2Phone)}` : ''}`,
+    replace && state.students.length && !state.isSample ? `會取代目前的 ${state.students.length} 位學生，並清空所有分組。` : '',
+    '判斷正確嗎？'].filter(Boolean).join('\n');
+  if (!(await confirmBox(msg, '正確，匯入', '取消'))) return;
   if (replace || state.isSample) {
     state.students = list;
     for (const k of Object.keys(BOARDS)) state[k].groups = [];
