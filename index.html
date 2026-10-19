@@ -250,6 +250,14 @@ body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%,
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin-bottom: 16px; }
 .panel h3 { font-size: 1.05rem; margin-bottom: 12px; }
 .panel .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.itin-edit td { padding: 3px 4px; }
+.itin-edit input { width: 100%; border-color: transparent; background: transparent; }
+.itin-edit input:hover, .itin-edit input:focus { border-color: var(--line); background: var(--surface); }
+.itin-edit .c-day { width: 7em; } .itin-edit .c-time { width: 8em; } .itin-edit .c-place { width: 13em; } .itin-edit .c-note { width: 13em; }
+.itin-edit tr.day-start td { border-top: 2px solid var(--line); }
+#itinDlg form { gap: 12px; }
+.itin-opt { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); }
+.itin-opt .sub { color: var(--muted); font-size: .85rem; padding-left: 1.6em; }
 .idea-list { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 70ch; }
 .idea-list b { color: var(--ink); }
 
@@ -323,6 +331,9 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   .tbl tr { break-inside: avoid; }
   .stats { display: none; }
   #sec-contacts, #sec-students { page: wide; }
+  .itin-panel { border: 0; padding: 0; }
+  #itinPrint td.day { font-weight: 700; white-space: nowrap; }
+  #itinPrint td.time { white-space: nowrap; font-family: var(--font-mono); }
   .buses { display: block; }
   .bus-card + .bus-card { break-before: page; }
   .bus-card { border: 0; }
@@ -360,11 +371,12 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
     <button class="btn sm" type="button" data-act="clear-sample">清除範例，開始建立我的名單</button>
   </div>
 
-  <!-- 基本資料 -->
+  <!-- 行程資料 -->
   <section class="section" id="sec-settings" data-tab="settings">
-    <div class="print-head"><h2>行程基本資料</h2><p>這些資訊會出現在每一張列印頁的標題列。</p></div>
-    <div class="panel">
-      <h3>行程</h3>
+    <div class="ph"></div>
+    <div class="panel no-print">
+      <h3>基本資訊</h3>
+      <p class="hint" style="margin-top:-6px">這些資訊會出現在每一張列印頁的標題列。</p>
       <div class="form-grid">
         <label class="field"><span>活動名稱</span><input type="text" id="t-title" data-trip="title" placeholder="例：六年級畢業旅行"></label>
         <label class="field"><span>日期</span><input type="text" id="t-date" data-trip="date" placeholder="例：2026/11/12–11/14"></label>
@@ -374,7 +386,23 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel itin-panel">
+      <h3 class="no-print">行程表</h3>
+      <div class="row no-print" style="margin-bottom:10px">
+        <label class="btn primary" for="itinFile">匯入行程檔…</label>
+        <input type="file" id="itinFile" accept=".csv,.txt,.tsv,.xlsx,.xls" hidden>
+        <button class="btn" type="button" data-act="itin-paste">貼上行程</button>
+        <button class="btn" type="button" data-act="itin-template">下載行程範本 (CSV)</button>
+        <button class="btn" type="button" data-act="itin-add">＋ 新增一列</button>
+        <span class="sep" style="flex:1"></span>
+        <button class="btn ghost danger" type="button" data-act="itin-clear">清空行程表</button>
+      </div>
+      <p class="hint no-print" style="margin:0 0 10px">行程檔不一定要匯入，也可以直接在下表輸入。匯入前會先預覽，可以選擇只套用基本資訊、只匯入行程表，或兩者都要。可用旅行社給的 Excel、CSV，或從 Word 表格複製貼上。</p>
+      <div class="table-wrap no-print"><table class="tbl itin-edit" id="itinEdit"></table></div>
+      <table class="tbl print-only" id="itinPrint"></table>
+    </div>
+
+    <div class="panel no-print">
       <h3>資料備份</h3>
       <p class="hint">所有資料只存在這台電腦的這個瀏覽器裡，不會上傳。換電腦、清除瀏覽紀錄前，請先下載備份檔。</p>
       <div class="row">
@@ -386,7 +414,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel no-print">
       <h3>行前還可以準備的事</h3>
       <ul class="idea-list hint">
         <li><b>特殊照護</b>：已內建總表；素食與食物過敏也會標在用餐分組，暈車標在遊覽車座位，醫療狀況標在活動與房間分組。</li>
@@ -492,6 +520,19 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   </form>
 </dialog>
 
+<!-- 行程匯入預覽 -->
+<dialog id="itinDlg">
+  <form method="dialog" id="itinForm">
+    <h3>匯入行程檔</h3>
+    <textarea id="itinText" rows="7" placeholder="從 Excel 或 Word 表格複製後貼在這裡（含標題列：日期、時間、行程、地點、備註）"></textarea>
+    <div id="itinPreview"></div>
+    <div class="dlg-actions">
+      <button class="btn" type="button" data-act="itin-cancel">不匯入</button>
+      <button class="btn primary" type="submit" id="itinGo">匯入</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- 確認 -->
 <dialog id="confirmDlg">
   <form method="dialog">
@@ -509,7 +550,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
 'use strict';
 const KEY = 'fieldtrip-planner-v1';
 const TABS = [
-  ['settings', '基本資料'], ['students', '學生名單'], ['activity', '活動分組'], ['dining', '用餐分組'],
+  ['settings', '行程資料'], ['students', '學生名單'], ['activity', '活動分組'], ['dining', '用餐分組'],
   ['rooms', '房間分組'], ['bus', '遊覽車座位'], ['contacts', '聯絡資料'], ['care', '特殊照護'],
 ];
 const FIELDS = ['no','name','gender','phone','ec1Name','ec1Rel','ec1Phone','ec2Name','ec2Rel','ec2Phone','diet','medical','note'];
@@ -570,6 +611,7 @@ function blankState() {
     dining: { cap: 10, groups: [] },
     rooms: { cap: 4, groups: [] },
     bus: { n: 1, rows: 10, back5: true, sameGender: true, groups: [] },
+    itinerary: [],
     isSample: false,
   };
 }
@@ -590,6 +632,7 @@ function normalizeState(s) {
     dining: Object.assign(b.dining, s.dining || {}),
     rooms: Object.assign(b.rooms, s.rooms || {}),
     bus: Object.assign(b.bus, s.bus || {}),
+    itinerary: Array.isArray(s.itinerary) ? s.itinerary : [],
     isSample: !!s.isSample,
   };
 }
@@ -604,7 +647,7 @@ function save() {
   }
 }
 
-const ui = { tab: 'students', sel: null, lastAuto: {} };
+const ui = { tab: 'students', sel: null, lastAuto: {}, itinPending: null };
 let state;
 
 /* ---------- 小工具 ---------- */
@@ -985,6 +1028,126 @@ async function doImport() {
   save(); renderAll();
 }
 
+/* ---------- 行程表 ---------- */
+const ITIN_FIELDS = ['day', 'time', 'item', 'place', 'note'];
+const ITIN_LABELS = { day: '日期', time: '時間', item: '行程', place: '地點', note: '備註' };
+const ITIN_ALIAS = {
+  day: ['日期', '天數', '天', '日次', '日程', 'day', 'date'],
+  time: ['時間', '時段', 'time'],
+  item: ['行程', '活動', '內容', '項目', '行程內容', '活動內容', '行程安排', '活動名稱'],
+  place: ['地點', '地址', '場地', 'place', 'location'],
+  note: ['備註', '說明', '其他', '注意事項', 'note'],
+};
+const INFO_ALIAS = {
+  title: ['活動名稱', '名稱', '標題', '行程名稱'],
+  date: ['日期', '活動日期', '出發日期', '期間'],
+  place: ['地點', '目的地', '活動地點'],
+  school: ['學校', '學校名稱'],
+  cls: ['班級', '年級班級'],
+};
+const INFO_LABELS = { title: '活動名稱', date: '日期', place: '地點', school: '學校', cls: '班級' };
+function parseItinerary(rows) {
+  const lookup = (map, cell) => { const n = normH(cell); return Object.keys(map).find(k => map[k].some(a => normH(a) === n)); };
+  const info = {}, items = [];
+  let cols = null, day = '';
+  const push = it => {
+    if (it.day) day = it.day; else it.day = day;
+    if (it.time || it.item || it.place || it.note) items.push(Object.assign({ id: uid() }, it));
+  };
+  for (const raw of rows) {
+    const r = raw.map(c => String(c ?? '').trim());
+    const filled = r.filter(Boolean);
+    if (!filled.length) continue;
+    if (!cols) {
+      const hits = r.map(c => lookup(ITIN_ALIAS, c));
+      if (hits.includes('item') && (hits.includes('time') || hits.includes('day'))) {   // 行程表標題列
+        cols = {}; hits.forEach((f, i) => { if (f && cols[f] === undefined) cols[f] = i; });
+        continue;
+      }
+      const key = filled.length <= 2 && lookup(INFO_ALIAS, r.find(Boolean));
+      if (key) { info[key] = filled[1] || ''; continue; }
+    }
+    if (cols) {
+      const it = {}; ITIN_FIELDS.forEach(f => { it[f] = cols[f] !== undefined ? r[cols[f]] || '' : ''; });
+      push(it);
+    } else if (filled.length >= 3) {
+      const it = {}; ITIN_FIELDS.forEach((f, i) => { it[f] = r[i] || ''; });
+      push(it);
+    } else {   // 從 Word 貼上的純文字：「第一天」「11/12」當日期，「08:30 出發」拆成時間＋行程
+      const text = filled.join(' ');
+      const dm = text.match(/^(第\s*[一二三四五六七八九十\d]+\s*天.*|day\s*\d+.*|\d{1,2}\s*[\/月]\s*\d{1,2}\s*日?(\s*[（(][^）)]*[）)])?)$/i);
+      if (dm) { day = text; continue; }
+      const tm = text.match(/^(\d{1,2}[:：]\d{2}(?:\s*[-~～–]\s*\d{1,2}[:：]\d{2})?)\s*(.*)$/);
+      push(tm ? { day: '', time: tm[1], item: tm[2], place: '', note: '' } : { day: '', time: '', item: text, place: '', note: '' });
+    }
+  }
+  return { info, items };
+}
+function openItinImport(rows) {
+  ui.itinPending = rows ? parseItinerary(rows) : null;
+  $('#itinText').value = '';
+  $('#itinText').hidden = !!rows;
+  renderItinPreview();
+  $('#itinDlg').showModal();
+  if (!rows) $('#itinText').focus();
+}
+function renderItinPreview() {
+  const p = ui.itinPending, box = $('#itinPreview');
+  if (!p) { box.innerHTML = '<p class="hint">貼上內容後，這裡會顯示讀到的資料。</p>'; $('#itinGo').disabled = true; return; }
+  const keys = Object.keys(p.info).filter(k => p.info[k]);
+  let html = '';
+  if (keys.length) html += `<label class="itin-opt"><span class="inline"><input type="checkbox" id="itin-useInfo" checked> <b>套用基本資訊</b></span>
+    <span class="sub">${keys.map(k => `${INFO_LABELS[k]}：${esc(p.info[k])}`).join('<br>')}</span></label>`;
+  if (p.items.length) html += `<div class="itin-opt"><label class="inline"><input type="checkbox" id="itin-useItems" checked> <b>匯入行程表（${p.items.length} 列）</b></label>
+    ${state.itinerary.length ? `<span class="sub"><label class="inline"><input type="radio" name="itinMode" id="itin-replace" value="replace" checked> 取代目前的 ${state.itinerary.length} 列</label>
+      <label class="inline"><input type="radio" name="itinMode" id="itin-append" value="append"> 加到後面</label></span>` : ''}
+    <div class="table-wrap"><table class="tbl"><thead><tr>${ITIN_FIELDS.map(f => `<th>${ITIN_LABELS[f]}</th>`).join('')}</tr></thead><tbody>${
+      p.items.slice(0, 6).map(it => `<tr>${ITIN_FIELDS.map(f => `<td>${esc(it[f])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    ${p.items.length > 6 ? `<span class="hint">…還有 ${p.items.length - 6} 列</span>` : ''}</div>`;
+  if (!html) html = '<p class="hint">沒有讀到行程資料。請確認第一列有「日期、時間、行程」等欄位名稱，或下載行程範本參考。</p>';
+  box.innerHTML = html;
+  $('#itinGo').disabled = !keys.length && !p.items.length;
+}
+function applyItinImport() {
+  const p = ui.itinPending; if (!p) return;
+  const useInfo = $('#itin-useInfo')?.checked, useItems = $('#itin-useItems')?.checked;
+  if (!useInfo && !useItems) { toast('沒有勾選要匯入的內容。'); return; }
+  const done = [];
+  if (useInfo) { Object.entries(p.info).forEach(([k, v]) => { if (v) state.trip[k] = v; }); done.push('基本資訊'); }
+  if (useItems) {
+    state.itinerary = $('#itin-append')?.checked ? state.itinerary.concat(p.items) : p.items;
+    done.push(`${p.items.length} 列行程`);
+  }
+  $('#itinDlg').close();
+  save(); renderAll();
+  toast(`已匯入${done.join('和')}。`);
+}
+function exportItinTemplate() {
+  const lines = [
+    '活動名稱,六年級校外教學', '日期,2026/11/12–11/13', '地點,六福村、台中科博館', '學校,', '班級,', '',
+    ITIN_FIELDS.map(f => ITIN_LABELS[f]).join(','),
+    '11/12（四）,07:30,學校集合、點名,學校穿堂,提早 10 分鐘到',
+    ',08:00,遊覽車出發,,',
+    ',10:00–16:00,六福村分組自由活動,六福村主題樂園,依活動分組行動',
+    ',18:00,晚餐,飯店餐廳,依用餐分組入座',
+    '11/13（五）,09:00,參觀台中科博館,國立自然科學博物館,',
+    ',16:30,返抵學校,學校穿堂,家長接送',
+  ];
+  download('行程範本.csv', '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+}
+function renderItinerary() {
+  const sec = $('#sec-settings'), it = state.itinerary;
+  sec.querySelector('.ph').innerHTML = printHead('行程表');
+  sec.classList.toggle('printable', it.length > 0);
+  $('#itinEdit').innerHTML = `<thead><tr><th>日期</th><th>時間</th><th>行程</th><th>地點</th><th>備註</th><th></th></tr></thead><tbody>` +
+    (it.length ? it.map((x, i) => `<tr class="${i && x.day !== it[i - 1].day ? 'day-start' : ''}">${ITIN_FIELDS.map(f =>
+      `<td class="c-${f}"><input type="text" id="it-${x.id}-${f}" data-itin="${x.id}:${f}" value="${esc(x[f])}" aria-label="${ITIN_LABELS[f]}"></td>`).join('')}
+      <td><button class="btn sm ghost danger" type="button" data-act="itin-del" data-id="${x.id}" aria-label="刪除這一列">✕</button></td></tr>`).join('')
+    : `<tr><td colspan="6" class="hint" style="padding:18px;text-align:center">還沒有行程。可以匯入行程檔，或按「＋ 新增一列」自己輸入。</td></tr>`) + '</tbody>';
+  $('#itinPrint').innerHTML = `<thead><tr><th>日期</th><th>時間</th><th>行程</th><th>地點</th><th>備註</th></tr></thead><tbody>` +
+    it.map((x, i) => `<tr><td class="day">${i && x.day === it[i - 1].day ? '' : esc(x.day)}</td><td class="time">${esc(x.time)}</td><td>${esc(x.item)}</td><td>${esc(x.place)}</td><td>${esc(x.note)}</td></tr>`).join('') + '</tbody>';
+}
+
 /* ---------- 匯出 ---------- */
 const csvCell = v => /[",\n\r]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? '');
 function exportCsv() {
@@ -1231,7 +1394,7 @@ function renderAll() {
   document.body.classList.toggle('selecting', !!ui.sel);
   renderHeader(); renderStudents();
   Object.keys(BOARDS).forEach(renderBoard);
-  renderContacts(); renderCare();
+  renderContacts(); renderCare(); renderItinerary();
 }
 
 /* ---------- 學生編輯 ---------- */
@@ -1245,6 +1408,7 @@ function openStudent(id) {
   $('#stuDlg').showModal();
   $('#f-name').focus();
 }
+$('#itinForm').addEventListener('submit', e => { e.preventDefault(); applyItinImport(); });
 $('#stuForm').addEventListener('submit', e => {
   e.preventDefault();
   const name = $('#f-name').value.trim();
@@ -1266,7 +1430,7 @@ $('#stuForm').addEventListener('submit', e => {
 /* ---------- 列印 ---------- */
 function doPrint(all) {
   document.body.classList.toggle('print-all', all);
-  if (!all && ui.tab === 'settings') { toast('「基本資料」沒有需要列印的內容，請切到要印的頁面。'); return; }
+  if (!all && ui.tab === 'settings' && !state.itinerary.length) { toast('行程表是空的，沒有可列印的內容。'); return; }
   renderAll();
   window.print();
 }
@@ -1355,6 +1519,20 @@ document.addEventListener('click', async e => {
           state = blankState(); save(); renderAll(); toast('已清除全部資料。');
         }
         break;
+      case 'itin-paste': openItinImport(null); break;
+      case 'itin-cancel': $('#itinDlg').close(); break;
+      case 'itin-template': exportItinTemplate(); break;
+      case 'itin-add': {
+        const last = state.itinerary.at(-1);
+        const x = { id: uid(), day: last ? last.day : '', time: '', item: '', place: '', note: '' };
+        state.itinerary.push(x); save(); renderAll();
+        document.getElementById(`it-${x.id}-${last ? 'time' : 'day'}`)?.focus();
+        break;
+      }
+      case 'itin-del': state.itinerary = state.itinerary.filter(x => x.id !== a.dataset.id); save(); renderAll(); break;
+      case 'itin-clear':
+        if (state.itinerary.length && await confirmBox('清空整個行程表？', '清空')) { state.itinerary = []; save(); renderAll(); }
+        break;
       case 'backup':
         download(`${fileStamp()}_校外教學備份.json`, JSON.stringify(state, null, 2), 'application/json');
         break;
@@ -1412,6 +1590,17 @@ document.addEventListener('drop', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.trip) { state.trip[el.dataset.trip] = el.value; save(); renderHeader(); return; }
+  if (el.dataset.itin) {
+    const [id, f] = el.dataset.itin.split(':');
+    const x = state.itinerary.find(y => y.id === id); if (x) { x[f] = el.value; save(); }
+    return;
+  }
+  if (el.id === 'itinText') {
+    const t = el.value.trim();
+    ui.itinPending = t ? parseItinerary(parseDelimited(t)) : null;
+    renderItinPreview();
+    return;
+  }
   if (el.dataset.busf) {
     const [gid, f] = el.dataset.busf.split(':');
     const b = state.bus.groups.find(x => x.id === gid); if (b) { b[f] = el.value; save(); }
@@ -1433,7 +1622,12 @@ document.addEventListener('change', e => {
     save(); renderAll(); return;
   }
   if (el.dataset.busOpt) { state.bus[el.dataset.busOpt] = el.checked; save(); renderAll(); return; }
-  if (el.dataset.busf) { renderAll(); return; }
+  if (el.dataset.busf || el.dataset.itin) { renderAll(); return; }
+  if (el.id === 'itinFile' && el.files[0]) {
+    const f = el.files[0]; el.value = '';
+    readImportFile(f).then(openItinImport).catch(err => toast(`${err.message}。沒有網路時請改用 CSV 或直接貼上。`));
+    return;
+  }
   if (el.dataset.gcap) {
     const [k, gid] = el.dataset.gcap.split(':');
     const g = state[k].groups.find(x => x.id === gid);
@@ -1464,6 +1658,16 @@ function sampleState() {
   s.isSample = true;
   Object.assign(s.trip, { title: '六年級校外教學', date: '2026/11/12–11/13', place: '六福村主題樂園、台中科博館', cls: '六年三班',
     school: '範例國小' });
+  s.itinerary = parseItinerary([
+    ['日期', '時間', '行程', '地點', '備註'],
+    ['11/12（四）', '07:30', '學校集合、點名', '學校穿堂', '提早 10 分鐘到'],
+    ['', '08:00', '遊覽車出發', '', ''],
+    ['', '10:00–16:00', '六福村分組自由活動', '六福村主題樂園', '依活動分組行動'],
+    ['', '18:00', '晚餐', '飯店餐廳', '依用餐分組入座'],
+    ['', '21:30', '就寢', '飯店', '依房間分組'],
+    ['11/13（五）', '09:00', '參觀台中科博館', '國立自然科學博物館', ''],
+    ['', '16:30', '返抵學校', '學校穿堂', '家長接送'],
+  ]).items;
   const boys = ['陳柏翰','林冠宇','黃宥廷','張承恩','李品睿','王宇軒','吳柏諺','劉家豪','蔡承翰','楊子睿','許哲瑋','鄭宇恩','謝定宸'];
   const girls = ['陳品妤','林語彤','黃子晴','張芯瑜','李宥蓁','王思妤','吳亭妤','劉以涵','蔡沛恩','楊雨潔','許詠晴','鄭可欣'];
   const extra = { 3: { medical: '花生過敏（隨身攜帶藥物）' }, 7: { diet: '蛋奶素' }, 15: { diet: '蛋奶素' },
