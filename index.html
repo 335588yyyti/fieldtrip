@@ -243,6 +243,7 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 .mtable td { padding: 3px 6px; border-top: 1px solid var(--line); }
 .card-notes { margin: 0; padding: 6px 10px 8px; list-style: none; border-top: 1px dashed var(--line); font-size: .84rem; color: var(--warn); display: grid; gap: 2px; }
 .card-notes b { color: var(--ink); font-weight: 700; white-space: nowrap; }
+.bus-card .card-notes { border-top: 0; border-bottom: 1px dashed var(--line); background: var(--warn-bg); font-size: .9rem; padding: 6px 12px; }
 .board-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
 
 /* ---------- 遊覽車座位 ---------- */
@@ -278,6 +279,38 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 .seat.drop-hot { outline: 2px solid var(--accent); }
 body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent); }
 .seat.aisle { grid-column: 3; }
+
+/* ---------- 座位輸入座號 ---------- */
+.seat-edit { display: flex; gap: 3px; align-items: center; }
+.seat-in { width: 100%; min-width: 0; text-align: center; font-weight: 700; padding: 2px 4px; border: 2px solid var(--accent) !important; }
+.seat-edit .btn { padding: 1px 5px; font-size: .75rem; }
+
+/* ---------- 遊覽車全螢幕（課堂用） ---------- */
+.present-bar { display: none; }
+body.present .top, body.present #sampleNotice, body.present footer.foot,
+body.present #sec-bus .toolbar, body.present #sec-bus > .hint, body.present #sec-bus .print-head,
+body.present #sec-bus .card-notes, body.present #sec-bus .card-h .btn { display: none !important; }
+body.present main { max-width: none; padding-block: 8px; }
+body.present .present-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;
+  font-size: 1.15rem; font-weight: 700; color: var(--ink);
+}
+body.present #sec-bus .board { grid-template-columns: 280px minmax(0, 1fr); gap: 16px; }
+body.present #sec-bus .pool { position: static; max-height: calc(100vh - 80px); }
+body.present #sec-bus .pool h3 { font-size: 1.3rem; }
+body.present #sec-bus .pool .chip { font-size: 1.3rem; padding: 6px 12px; }
+body.present #sec-bus .buses { flex-wrap: nowrap; }
+body.present #sec-bus .buses > .bus-card { max-width: 1000px; flex: 1 1 0; }
+body.present #sec-bus .card-h { padding: 4px 10px; }
+body.present #sec-bus .card-h .gname { font-size: 1.3rem; }
+body.present #sec-bus .bus-grid { margin: 6px; padding: 6px 8px; gap: 4px; }
+body.present #sec-bus .seat, body.present #sec-bus .door-cell { min-height: calc((100vh - 190px) / (var(--bus-rows, 12) + 1)); }
+body.present #sec-bus .seat { padding: 1.2vh 4px 1px; gap: 0; }
+body.present #sec-bus .seat .chip { font-size: min(1.4rem, 2.7vh); padding: 0 6px; line-height: 1.3; }
+body.present #sec-bus .seat .sl { font-size: min(.85rem, 1.6vh); }
+body.present #sec-bus .seat .rv { font-size: min(1rem, 2vh); }
+body.present #sec-bus .bus-front { font-size: min(.95rem, 1.8vh); padding-bottom: 2px; }
+body.present #sec-bus .row-no, body.present #sec-bus .door-cell { font-size: 1.15rem; }
 
 /* ---------- 學生小卡（名片大小 9 × 5.4 cm） ---------- */
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
@@ -680,7 +713,7 @@ const BOARDS = {
     extraLabel:'過敏／醫療', extra: s => s.medical,
     help:'男女分房，不同性別的學生不能放進同一間。每間人數可調整，房號可以直接改名稱。' },
   bus: { label:'遊覽車座位', unit:'車', hasCap:false, gender:false, leader:false, seats:true,
-    help:'座位依實際車型由前往後編號，門的位置會佔掉該排一側的座位，可在上方調整（填 0 表示沒有）。先點學生再點座位就能入座（選好幾位會從那個座位往後依序入座），只選一位時點已有人的座位會互換。點兩下座位上的學生可移回未入座。沒選學生時點空位，可以設為保留，並輸入老師姓名。' },
+    help:'座位依實際車型由前往後編號，門的位置會佔掉該排一側的座位，可在上方調整（填 0 表示沒有）。先點學生再點座位就能入座（選好幾位會從那個座位往後依序入座），只選一位時點已有人的座位會互換。點兩下座位上的學生可移回未入座。自動排座會把備註寫「暈車」的學生排在前面。沒選學生時點空位，可以直接輸入座號讓該位學生入座，或設為保留（可填老師姓名）。' },
 };
 /* 各分組頁要註明的特殊需求：素食與食物過敏放用餐，暈車放遊覽車，醫療狀況放活動與房間 */
 const FOOD_RE = /過敏|不吃|忌|乳糖|麩質|素/;
@@ -748,7 +781,7 @@ function save() {
   }
 }
 
-const ui = { tab: 'students', sel: null, lastAuto: {}, itinPending: null };
+const ui = { tab: 'students', sel: null, lastAuto: {}, itinPending: null, seatEdit: null };
 let state;
 
 /* ---------- 小工具 ---------- */
@@ -1032,6 +1065,9 @@ function autoBus(mode) {
       singles.forEach(s => units.push([s]));
     } else for (let i = 0; i < list.length; i += 2) units.push(list.slice(i, i + 2));
   });
+  // 會暈車的學生優先排在前面
+  const carsick = u => u.some(s => CAR_RE.test(`${s.medical || ''} ${s.note || ''}`));
+  units.sort((a, b) => carsick(b) - carsick(a));
   const slots = B.groups.flatMap(busSlots);
   for (let i = 0; i < units.length; i++) {
     const u = units[i];
@@ -1467,9 +1503,12 @@ function renderBus() {
         : rsv ? `<input type="text" class="rv-in no-print" id="rv-${b.id}-${id}" data-rv="${b.id}:${id}" value="${esc(label)}" placeholder="保留" aria-label="保留座位說明，例如老師姓名">
             <span class="rv print-only">${esc(label || '保留')}</span>
             <button class="rv-x no-print" type="button" data-act="unreserve" data-gid="${b.id}" data-seat="${id}" title="取消保留" aria-label="取消保留">×</button>`
-        : '<span class="rv">空位</span>';
+        : ui.seatEdit && ui.seatEdit.gid === b.id && ui.seatEdit.seat === id
+          ? `<span class="seat-edit no-print"><input type="text" inputmode="numeric" class="seat-in" id="seat-in" data-seat-in="${b.id}:${id}" placeholder="座號" aria-label="輸入座號">
+              <button class="btn sm" type="button" data-act="seat-reserve" data-gid="${b.id}" data-seat="${id}" title="設為保留座位（例如老師）">保留</button></span>`
+          : '<span class="rv">空位</span>';
       return `<div class="seat drop${rsv ? ' reserved' : s ? ' taken ' + gcls(s.gender) : ' empty'}${id.endsWith('M') ? ' aisle' : ''}" data-k="bus" data-gid="${b.id}" data-seat="${id}"
-        title="${rsv ? '保留座位，可輸入老師姓名' : s ? '' : '空位（沒選學生時點一下可設為保留）'}"><span class="sl">${nums[id]}</span>${body}</div>`;
+        title="${rsv ? '保留座位，可輸入老師姓名' : s ? '' : '空位：點一下可輸入座號，或設為保留'}"><span class="sl">${nums[id]}</span>${body}</div>`;
     };
     const side = part => Array.isArray(part) ? part.map(seat).join('') : `<div class="door-cell">${part}</div>`;
     const grid = busRows().map(row => row.back ? `<div class="back-row">${row.seats.map(seat).join('')}</div>`
@@ -1481,8 +1520,8 @@ function renderBus() {
         <span class="count">${mem.length}/${busCap(b)} 人</span>
         <button class="btn sm ghost" type="button" data-act="del-group" data-k="bus" data-gid="${b.id}" title="刪除這台車（學生回到未分組）" aria-label="刪除 ${esc(b.name)}">✕</button>
       </div>
-      <div class="bus-grid"><div class="bus-front"><span>司機</span><span>▼ 車頭方向 ▼</span><span></span></div>${grid}</div>
       ${notesHTML('bus', mem)}
+      <div class="bus-grid"><div class="bus-front"><span>司機</span><span>▼ 車頭方向 ▼</span><span></span></div>${grid}</div>
     </div>`;
   }).join('');
   sec.innerHTML = `${printHead('遊覽車座位表')}
@@ -1498,10 +1537,15 @@ function renderBus() {
       <button class="btn" type="button" data-act="auto" data-k="bus">自動排座</button>
       <button class="btn primary" type="button" data-act="auto" data-mode="random" data-k="bus" title="每按一次重新隨機一次">隨機排座</button>
       <button class="btn" type="button" data-act="fill" data-k="bus">只排未入座的人</button>
+      <button class="btn" type="button" data-act="present" title="放大到全螢幕，在教室大螢幕上讓學生自己點選座位">⛶ 全螢幕（課堂用）</button>
       <span class="sep"></span>
       <button class="btn ghost danger" type="button" data-act="clear-board" data-k="bus">全部移回未分組</button>
     </div>
     <p class="hint no-print" style="margin:-4px 0 12px">${BOARDS.bus.help}</p>
+    <div class="present-bar no-print">
+      <span>先點自己的名字，再點想坐的座位。點空位也可以直接輸入座號。</span>
+      <button class="btn primary" type="button" data-act="present-exit">結束全螢幕</button>
+    </div>
     ${pool.length && B.groups.length ? `<div class="notice print-only">尚有 ${pool.length} 人未安排座位：${pool.map(s => esc(s.name)).join('、')}</div>` : ''}
     <div class="board">
       <aside class="pool">
@@ -1511,7 +1555,34 @@ function renderBus() {
       <div class="buses">${cards || '<p class="hint">還沒有車輛。設定車數後按「自動排座」。</p>'}</div>
     </div>`;
   $('#bus-mode').value = prevMode;
+  sec.style.setProperty('--bus-rows', busRows().length);
+  const si = $('#seat-in');
+  if (si && document.activeElement !== si) si.focus();
 }
+function placeBySeatNo(gid, seat, val) {
+  const v = String(val).trim();
+  if (!v) return;
+  const s = state.students.find(x => String(x.no).trim() === v || (parseFloat(x.no) === parseFloat(v) && !isNaN(parseFloat(v))));
+  if (!s) { toast(`找不到座號 ${v} 的學生。`); return; }
+  seatOne(s.id, gid, seat);
+  ui.seatEdit = null; ui.sel = null;
+  save(); renderAll();
+  toast(`${s.no} ${s.name} 已入座 ${seatNumbers()[seat]} 號座。`);
+}
+function setPresent(on) {
+  document.body.classList.toggle('present', on);
+  ui.sel = null; ui.seatEdit = null;
+  if (on) {
+    if (ui.tab !== 'bus') setTab('bus');
+    try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch (e) {}
+  } else if (document.fullscreenElement) {
+    try { document.exitFullscreen(); } catch (e) {}
+  }
+  renderAll();
+}
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && document.body.classList.contains('present')) setPresent(false);
+});
 function renderCards() {
   const sec = $('#sec-cards'), t = state.trip, c = state.cards;
   sec.querySelector('.ph').innerHTML = printHead('學生小卡');
@@ -1691,6 +1762,9 @@ document.addEventListener('click', async e => {
           state = blankState(); save(); renderAll(); toast('已清除全部資料。');
         }
         break;
+      case 'seat-reserve': toggleReserve(a.dataset.gid, a.dataset.seat); ui.seatEdit = null; renderAll(); break;
+      case 'present': setPresent(true); break;
+      case 'present-exit': setPresent(false); break;
       case 'unreserve': {
         const b = state.bus.groups.find(x => x.id === a.dataset.gid);
         if (b) { delete b.seats[a.dataset.seat]; save(); renderAll(); }
@@ -1749,11 +1823,20 @@ document.addEventListener('click', async e => {
   }
   const drop = e.target.closest('.drop');
   if (drop && ui.sel && ui.sel.k === drop.dataset.k && !e.target.closest('input,select,button')) { moveMany(drop.dataset.k, [...ui.sel.sids], drop.dataset.gid, drop.dataset.seat); return; }
-  if (drop && !ui.sel && drop.dataset.seat && !e.target.closest('input')) { toggleReserve(drop.dataset.gid, drop.dataset.seat); return; }
+  if (drop && !ui.sel && drop.dataset.seat && !e.target.closest('input,button')) {
+    const b = state.bus.groups.find(x => x.id === drop.dataset.gid);
+    if (b && !b.seats[drop.dataset.seat]) { ui.seatEdit = { gid: drop.dataset.gid, seat: drop.dataset.seat }; renderAll(); }
+    return;
+  }
+  if (ui.seatEdit && !e.target.closest('.seat-edit')) { ui.seatEdit = null; renderAll(); }
   if (ui.sel && !e.target.closest('input,select,dialog')) { ui.sel = null; renderAll(); }
 });
 document.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.classList?.contains('chip')) { e.preventDefault(); e.target.click(); }
+  if (e.target.dataset?.seatIn) {
+    if (e.key === 'Enter') { e.preventDefault(); const [gid, seat] = e.target.dataset.seatIn.split(':'); placeBySeatNo(gid, seat, e.target.value); return; }
+    if (e.key === 'Escape') { ui.seatEdit = null; renderAll(); return; }
+  }
   if (e.key === 'Escape' && ui.sel) { ui.sel = null; renderAll(); }
 });
 
