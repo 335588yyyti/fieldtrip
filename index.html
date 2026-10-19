@@ -388,22 +388,6 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
       </div>
     </div>
 
-    <div class="panel itin-panel">
-      <h3 class="no-print">行程表</h3>
-      <div class="row no-print" style="margin-bottom:10px">
-        <label class="btn primary" for="itinFile">匯入行程檔…</label>
-        <input type="file" id="itinFile" accept=".csv,.txt,.tsv,.xlsx,.xls" hidden>
-        <button class="btn" type="button" data-act="itin-paste">貼上行程</button>
-        <button class="btn" type="button" data-act="itin-template">下載行程範本 (CSV)</button>
-        <button class="btn" type="button" data-act="itin-add">＋ 新增一列</button>
-        <span class="sep" style="flex:1"></span>
-        <button class="btn ghost danger" type="button" data-act="itin-clear">清空行程表</button>
-      </div>
-      <p class="hint no-print" style="margin:0 0 10px">行程檔不一定要匯入，也可以直接在下表輸入。匯入前會先預覽，可以選擇只套用基本資訊、只匯入行程表，或兩者都要。可用旅行社給的 Excel、CSV，或從 Word 表格複製貼上。</p>
-      <div class="table-wrap no-print"><table class="tbl itin-edit" id="itinEdit"></table></div>
-      <table class="tbl print-only" id="itinPrint"></table>
-    </div>
-
     <div class="panel no-print">
       <h3>資料備份</h3>
       <p class="hint">所有資料只存在這台電腦的這個瀏覽器裡，不會上傳。換電腦、清除瀏覽紀錄前，請先下載備份檔。</p>
@@ -425,6 +409,21 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
         <li><b>學生隨身小卡</b>：寫上組別、房號、老師電話、集合地點，掛在名牌套裡。</li>
         <li><b>行李與服裝提醒</b>：分組名單旁附上集合時間與攜帶物品，一起發給家長。</li>
       </ul>
+    </div>
+    <div class="panel itin-panel">
+      <h3 class="no-print">行程表 <span class="hint" style="font-weight:400">（選填）</span></h3>
+      <div class="row no-print" style="margin-bottom:10px">
+        <label class="btn primary" for="itinFile">匯入行程檔…</label>
+        <input type="file" id="itinFile" accept=".csv,.txt,.tsv,.xlsx,.xls" hidden>
+        <button class="btn" type="button" data-act="itin-paste">貼上行程</button>
+        <button class="btn" type="button" data-act="itin-template">下載行程範本 (CSV)</button>
+        <button class="btn" type="button" data-act="itin-add">＋ 新增一列</button>
+        <span class="sep" style="flex:1"></span>
+        <button class="btn ghost danger" type="button" data-act="itin-clear">清空行程表</button>
+      </div>
+      <p class="hint no-print" style="margin:0 0 10px">行程檔不一定要匯入，也可以直接在下表輸入。匯入前會先預覽，可以選擇只套用基本資訊、只匯入行程表，或兩者都要。可用旅行社給的 Excel、CSV，或從 Word 表格複製貼上。</p>
+      <div class="table-wrap no-print"><table class="tbl itin-edit" id="itinEdit"></table></div>
+      <table class="tbl print-only" id="itinPrint"></table>
     </div>
   </section>
 
