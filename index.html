@@ -371,8 +371,6 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
         <label class="field"><span>地點</span><input type="text" id="t-place" data-trip="place" placeholder="例：六福村、台中科博館"></label>
         <label class="field"><span>學校</span><input type="text" id="t-school" data-trip="school"></label>
         <label class="field"><span>班級</span><input type="text" id="t-cls" data-trip="cls" placeholder="例：六年三班"></label>
-        <label class="field"><span>帶隊老師</span><input type="text" id="t-teacher" data-trip="teacher"></label>
-        <label class="field"><span>老師手機</span><input type="tel" id="t-teacherPhone" data-trip="teacherPhone"></label>
       </div>
     </div>
 
@@ -566,7 +564,7 @@ function careFor(k, s) {
 /* ---------- 狀態 ---------- */
 function blankState() {
   return {
-    trip: { title:'校外教學', date:'', place:'', school:'', cls:'', teacher:'', teacherPhone:'' },
+    trip: { title:'校外教學', date:'', place:'', school:'', cls:'' },
     students: [],
     activity: { n: 6, groups: [] },
     dining: { cap: 10, groups: [] },
@@ -1012,8 +1010,7 @@ function exportTemplate() {
 function busSeatText(sid) { const x = seatOf(sid); return x ? `${x.b.name} ${x.seat}` : ''; }
 function printHead(title) {
   const t = state.trip;
-  const meta = [t.date && `日期 ${t.date}`, t.place && `地點 ${t.place}`, (t.school || t.cls) && `${t.school} ${t.cls}`.trim(),
-    t.teacher && `帶隊 ${t.teacher}${t.teacherPhone ? ' ' + t.teacherPhone : ''}`].filter(Boolean).join('　');
+  const meta = [t.date && `日期 ${t.date}`, t.place && `地點 ${t.place}`, (t.school || t.cls) && `${t.school} ${t.cls}`.trim()].filter(Boolean).join('　');
   return `<div class="print-head"><h2>${esc(t.title || '校外教學')}・${esc(title)}</h2><p>${esc(meta)}</p></div>`;
 }
 function renderHeader() {
@@ -1466,7 +1463,7 @@ function sampleState() {
   const s = blankState();
   s.isSample = true;
   Object.assign(s.trip, { title: '六年級校外教學', date: '2026/11/12–11/13', place: '六福村主題樂園、台中科博館', cls: '六年三班',
-    school: '範例國小', teacher: '林老師', teacherPhone: '0900-000-000' });
+    school: '範例國小' });
   const boys = ['陳柏翰','林冠宇','黃宥廷','張承恩','李品睿','王宇軒','吳柏諺','劉家豪','蔡承翰','楊子睿','許哲瑋','鄭宇恩','謝定宸'];
   const girls = ['陳品妤','林語彤','黃子晴','張芯瑜','李宥蓁','王思妤','吳亭妤','劉以涵','蔡沛恩','楊雨潔','許詠晴','鄭可欣'];
   const extra = { 3: { medical: '花生過敏（隨身攜帶藥物）' }, 7: { diet: '蛋奶素' }, 15: { diet: '蛋奶素' },
