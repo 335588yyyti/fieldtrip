@@ -56,6 +56,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--paper); color: var(--ink);
@@ -280,6 +281,20 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent); }
 .seat.aisle { grid-column: 3; }
 
+/* ---------- 班級切換與存檔 ---------- */
+.proj-sel { font-weight: 700; max-width: 12em; padding: 4px 6px; border-color: var(--line); }
+.file-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; margin-bottom: 8px;
+  border-radius: var(--r); background: var(--paper); border: 1px solid var(--line); font-size: .92rem; }
+.file-status.ok { border-color: var(--ok); }
+.file-status.ok b { color: var(--ok); }
+.file-status.warn { border-color: var(--warn); }
+.file-status.warn b { color: var(--warn); }
+.proj-list { display: grid; gap: 4px; }
+.proj-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
+.proj-row.cur { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.proj-row .nm { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-row .ct { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+
 /* ---------- 座位輸入座號 ---------- */
 .seat-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; align-items: stretch; }
 .seat-in { width: 100%; min-width: 0; text-align: center; font-weight: 900; font-size: 1.35rem; line-height: 1.1; padding: 1px 2px; border: 2px solid var(--accent) !important; }
@@ -472,6 +487,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   <div class="top-inner">
     <div class="top-row">
       <div class="brand">
+        <select id="projSel" class="proj-sel" aria-label="切換班級" title="切換班級"></select>
         <h1><input type="text" class="brand-input" id="brandTitle" data-trip="title" aria-label="活動名稱（點一下可修改）" title="點一下修改活動名稱" placeholder="輸入活動名稱"></h1>
         <button class="meta" type="button" id="brandMeta" data-goto="settings" title="修改日期、地點、班級"></button>
       </div>
@@ -489,6 +505,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
     <span>目前顯示的是範例學生（姓名、電話皆為虛構），方便你先試用各項功能。</span>
     <button class="btn sm" type="button" data-act="clear-sample">清除範例，開始建立我的名單</button>
   </div>
+  <div id="backupNotice" class="notice no-print" hidden></div>
 
   <!-- 行程資料 -->
   <section class="section" id="sec-settings" data-tab="settings">
@@ -506,18 +523,28 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
 
     <div class="panel-pair no-print">
     <div class="panel">
-      <h3>資料備份</h3>
-      <p class="hint">所有資料只存在這台電腦的這個瀏覽器裡，不會上傳。換電腦、清除瀏覽紀錄前，請先下載備份檔。</p>
+      <h3>存檔與備份</h3>
+      <p class="hint">資料會自動存在這台電腦的瀏覽器裡。存成檔案並放在 Google 雲端硬碟或 OneDrive 的同步資料夾，就能在其他電腦打開同一個檔案繼續編輯。</p>
+      <div id="fileStatus" class="file-status"></div>
       <div class="row">
-        <button class="btn" type="button" data-act="backup">下載備份檔 (.json)</button>
+        <button class="btn" type="button" data-act="backup">下載備份檔</button>
         <label class="btn" for="restoreFile">從備份檔還原…</label>
         <input type="file" id="restoreFile" accept=".json,application/json" hidden>
         <button class="btn" type="button" data-act="load-sample">載入範例資料</button>
-        <button class="btn danger" type="button" data-act="reset-all">清除全部資料</button>
+        <button class="btn danger" type="button" data-act="reset-all">清除這個班級的資料</button>
       </div>
     </div>
 
     <div class="panel">
+      <h3>班級<span class="hint">每個班級的名單與分組分開存放</span></h3>
+      <div id="projList" class="proj-list"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" type="button" data-act="proj-new">＋ 新增班級</button>
+      </div>
+    </div>
+    </div>
+
+    <div class="panel no-print">
       <h3>行前還可以準備的事</h3>
       <ul class="idea-list hint">
         <li><b>特殊照護</b>：已內建總表；素食與食物過敏也會標在用餐分組，暈車標在遊覽車座位，醫療狀況標在活動與房間分組。</li>
@@ -526,7 +553,6 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
         <li><b>學生隨身小卡</b>：寫上組別、房號、老師電話、集合地點，掛在名牌套裡。</li>
         <li><b>行李與服裝提醒</b>：分組名單旁附上集合時間與攜帶物品，一起發給家長。</li>
       </ul>
-    </div>
     </div>
     <div class="panel itin-panel">
       <h3 class="no-print">行程表 <span class="hint" style="font-weight:400">（選填）</span></h3>
@@ -672,7 +698,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   <form method="dialog">
     <h3 id="confirmMsg"></h3>
     <div class="dlg-actions">
-      <button class="btn" value="no">取消</button>
+      <button class="btn" value="no" id="confirmNo">取消</button>
       <button class="btn primary" value="yes" id="confirmYes">確定</button>
     </div>
   </form>
@@ -748,14 +774,31 @@ function blankState() {
     itinerary: [],
     cards: { note: '', show: { activity: true, dining: true, rooms: true, bus: true } },
     isSample: false,
+    pid: uid(), createdAt: Date.now(), savedAt: 0, backupAt: 0,
   };
 }
+// 儲存方式：每個班級一筆（fieldtrip-proj-<id>），另存一份班級清單（META_KEY）
+const META_KEY = 'fieldtrip-meta-v1';
+const PKEY = id => 'fieldtrip-proj-' + id;
+let meta = { current: '', projects: [] };
+function readJSON(k) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
+function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) {} }
+const projLabel = st => `${st.trip.cls || '未命名班級'}${st.trip.title ? '・' + st.trip.title : ''}`;
 function load() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    return normalizeState(JSON.parse(raw));
-  } catch (e) { return null; }
+  meta = readJSON(META_KEY) || { current: '', projects: [] };
+  if (!meta.projects.length) {
+    const old = readJSON(KEY);   // 舊版只有一份資料，轉成第一個班級
+    if (!old) return null;
+    try {
+      const st = normalizeState(old);
+      meta = { current: st.pid, projects: [{ id: st.pid, label: projLabel(st) }] };
+      localStorage.setItem(PKEY(st.pid), JSON.stringify(st));
+      saveMeta(); localStorage.removeItem(KEY);
+      return st;
+    } catch (e) { return null; }
+  }
+  const id = meta.projects.some(p => p.id === meta.current) ? meta.current : meta.projects[0].id;
+  try { const st = normalizeState(readJSON(PKEY(id))); st.pid = id; meta.current = id; return st; } catch (e) { return null; }
 }
 function normalizeState(s) {
   const b = blankState();
@@ -771,20 +814,206 @@ function normalizeState(s) {
     itinerary: Array.isArray(s.itinerary) ? s.itinerary : [],
     cards: { note: s.cards?.note || '', show: Object.assign(b.cards.show, s.cards?.show || {}) },
     isSample: !!s.isSample,
+    pid: s.pid || b.pid, createdAt: s.createdAt || b.createdAt, savedAt: s.savedAt || 0, backupAt: s.backupAt || 0,
   };
 }
-let saveTimer;
-function save() {
+// changed=true 代表內容有修改：記錄修改時間，並寫入已連結的檔案
+function persist(changed) {
+  if (changed) state.savedAt = Date.now();
+  const p = meta.projects.find(x => x.id === state.pid);
+  if (p) p.label = projLabel(state); else meta.projects.push({ id: state.pid, label: projLabel(state) });
+  meta.current = state.pid; saveMeta();
+  if (changed) scheduleFileWrite();
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(PKEY(state.pid), JSON.stringify(state));
     const t = new Date();
     $('#saveState').textContent = ` 最後儲存：${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`;
   } catch (e) {
     $('#saveState').textContent = ' 無法自動儲存（瀏覽器封鎖了儲存空間），請記得下載備份檔。';
   }
 }
+const save = () => persist(true);
 
-const ui = { tab: 'students', sel: null, lastAuto: {}, itinPending: null, seatEdit: null };
+/* ---------- 班級 ---------- */
+function resetUi() { ui.sel = null; ui.lastAuto = {}; ui.seatEdit = null; }
+function switchProject(id) {
+  if (id === state.pid) return;
+  try {
+    state = normalizeState(readJSON(PKEY(id))); state.pid = id;
+  } catch (e) { toast('這個班級的資料讀不到。'); return; }
+  meta.current = id; saveMeta(); resetUi(); loadFileHandle(); renderAll();
+  toast(`已切換到 ${projLabel(state)}。`);
+}
+async function newProject() {
+  const reuse = await confirmBox('新班級要沿用目前的行程資料嗎？（活動名稱、日期、地點、學校、行程表、遊覽車設定、小卡底部文字；不含學生與分組）', '沿用行程資料', '全新空白');
+  const n = blankState();
+  if (reuse && !state.isSample) {
+    const copy = o => JSON.parse(JSON.stringify(o));
+    n.trip = Object.assign(copy(state.trip), { cls: '' });
+    n.itinerary = copy(state.itinerary).map(x => Object.assign(x, { id: uid() }));
+    n.bus = Object.assign(copy(state.bus), { groups: [] });
+    n.cards = copy(state.cards);
+    n.activity.n = state.activity.n; n.dining.cap = state.dining.cap; n.rooms.cap = state.rooms.cap;
+  } else if (reuse) {
+    n.trip = Object.assign({}, state.trip, { cls: '' });
+  }
+  state = n; resetUi(); ui.file = null;
+  persist(true); setTab('settings');
+  $('#t-cls').focus();
+  toast('已新增班級。請先填「班級」，再到學生名單匯入名單。');
+}
+async function deleteProject(id) {
+  const p = meta.projects.find(x => x.id === id); if (!p) return;
+  if (!(await confirmBox(`刪除「${p.label}」的所有名單與分組？此動作無法復原，建議先下載備份。`, '刪除'))) return;
+  try { localStorage.removeItem(PKEY(id)); } catch (e) {}
+  idbDel(id);
+  meta.projects = meta.projects.filter(x => x.id !== id);
+  if (id === state.pid) {
+    if (meta.projects.length) { state = { pid: '' }; switchProject(meta.projects[0].id); }
+    else { state = blankState(); ui.file = null; persist(false); renderAll(); }
+  } else { saveMeta(); renderAll(); }
+  toast(`已刪除「${p.label}」。`);
+}
+function renderProjects() {
+  $('#projSel').innerHTML = meta.projects.map(p => `<option value="${p.id}"${p.id === state.pid ? ' selected' : ''}>${esc(p.label)}</option>`).join('')
+    + '<option disabled>──────</option><option value="__new">＋ 新增班級…</option>';
+  $('#projList').innerHTML = meta.projects.map(p => {
+    const st = p.id === state.pid ? state : readJSON(PKEY(p.id));
+    const n = st?.students?.length || 0, cur = p.id === state.pid;
+    return `<div class="proj-row${cur ? ' cur' : ''}"><span class="nm">${esc(p.label)}</span><span class="ct">${n} 人</span>
+      ${cur ? '<span class="ct">目前</span>' : `<button class="btn sm" type="button" data-act="proj-switch" data-id="${p.id}">切換</button>`}
+      <button class="btn sm ghost danger" type="button" data-act="proj-del" data-id="${p.id}" aria-label="刪除 ${esc(p.label)}">刪除</button></div>`;
+  }).join('');
+}
+
+/* ---------- 存成檔案（可放在雲端同步資料夾） ---------- */
+const FS_OK = 'showSaveFilePicker' in window;
+const FILE_TYPES = [{ description: '校外教學資料', accept: { 'application/json': ['.json'] } }];
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('fieldtrip', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('handles');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function idbDo(mode, fn) {
+  try { const db = await idb(); return await new Promise((res, rej) => { const q = fn(db.transaction('handles', mode).objectStore('handles')); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+  catch (e) { return undefined; }
+}
+const idbGet = k => idbDo('readonly', s => s.get(k));
+const idbSet = (k, v) => idbDo('readwrite', s => s.put(v, k));
+const idbDel = k => idbDo('readwrite', s => s.delete(k));
+async function loadFileHandle() {
+  ui.file = null;
+  if (!FS_OK) return;
+  const pid = state.pid, handle = await idbGet(pid);
+  if (!handle || pid !== state.pid) return;
+  ui.file = { handle, name: handle.name, ok: false };
+  try { if (await handle.queryPermission({ mode: 'readwrite' }) === 'granted') { ui.file.ok = true; await syncFromFile(); } } catch (e) {}
+  renderAll();
+}
+let fileTimer;
+function scheduleFileWrite() {
+  if (!ui.file?.ok) return;
+  clearTimeout(fileTimer); fileTimer = setTimeout(writeFile, 800);
+}
+async function writeFile() {
+  if (!ui.file?.ok) return;
+  try {
+    state.backupAt = Date.now();
+    const w = await ui.file.handle.createWritable();
+    await w.write(JSON.stringify(state, null, 1)); await w.close();
+    ui.file.lastWrite = Date.now();
+    persist(false);
+  } catch (e) {
+    ui.file.ok = false;
+    toast('無法寫入存檔檔案，請到「行程資料」按「重新連結」。');
+  }
+  renderStorage();
+}
+// 檔案比這台電腦新（例如在別台電腦改過）就載入檔案；這台比較新就寫回檔案
+async function syncFromFile() {
+  try {
+    const next = normalizeState(JSON.parse(await (await ui.file.handle.getFile()).text()));
+    if ((next.savedAt || 0) > (state.savedAt || 0)) {
+      next.pid = state.pid; state = next; persist(false); resetUi();
+      toast(`已從 ${ui.file.name} 載入較新的版本（可能是在其他電腦修改的）。`);
+    } else if ((state.savedAt || 0) > (next.savedAt || 0)) await writeFile();
+  } catch (e) { /* 檔案讀不到時保留這台電腦的資料 */ }
+}
+async function saveAsFile() {
+  try {
+    const handle = await window.showSaveFilePicker({ suggestedName: `${fileStamp()}_校外教學.json`, types: FILE_TYPES });
+    ui.file = { handle, name: handle.name, ok: true };
+    await idbSet(state.pid, handle);
+    await writeFile();
+    toast(`已存成 ${handle.name}，之後的修改會自動存檔。`);
+  } catch (e) { if (e.name !== 'AbortError') toast('存檔失敗：' + e.message); }
+}
+async function openFile() {
+  try {
+    const [handle] = await window.showOpenFilePicker({ types: FILE_TYPES });
+    const next = normalizeState(JSON.parse(await (await handle.getFile()).text()));
+    if (await handle.requestPermission({ mode: 'readwrite' }) !== 'granted') { toast('需要允許存取檔案才能自動存檔。'); }
+    state = next; resetUi();
+    ui.file = { handle, name: handle.name, ok: (await handle.queryPermission({ mode: 'readwrite' })) === 'granted' };
+    await idbSet(state.pid, handle);
+    persist(false); renderAll();
+    toast(`已開啟 ${handle.name}（${projLabel(state)}）。`);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('這不是本工具的存檔檔案，無法開啟。');
+  }
+}
+async function relinkFile() {
+  if (!ui.file) return;
+  try {
+    if (await ui.file.handle.requestPermission({ mode: 'readwrite' }) === 'granted') {
+      ui.file.ok = true; await syncFromFile(); renderAll(); toast(`已重新連結 ${ui.file.name}。`);
+    }
+  } catch (e) { toast('找不到這個檔案，可能已被移動或刪除。請重新「開啟檔案」。'); }
+}
+const hhmm = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const SNOOZE = id => 'fieldtrip-snooze-' + id;
+function renderStorage() {
+  const fs = $('#fileStatus'), f = ui.file;
+  if (!FS_OK) {
+    fs.className = 'file-status';
+    fs.innerHTML = '這個瀏覽器不支援直接存檔（請用電腦版 Chrome 或 Edge）。可以用「下載備份檔」，再放到雲端硬碟。';
+  } else if (!f) {
+    fs.className = 'file-status';
+    fs.innerHTML = `<span>尚未存成檔案。</span>
+      <button class="btn sm primary" type="button" data-act="file-save">存成檔案…</button>
+      <button class="btn sm" type="button" data-act="file-open">開啟檔案…</button>`;
+  } else if (f.ok) {
+    fs.className = 'file-status ok';
+    fs.innerHTML = `<b>✓ 已連結 ${esc(f.name)}</b><span class="hint">修改會自動存檔${f.lastWrite ? `（${hhmm(f.lastWrite)}）` : ''}</span>
+      <button class="btn sm" type="button" data-act="file-save">另存新檔…</button>
+      <button class="btn sm" type="button" data-act="file-open">開啟檔案…</button>
+      <button class="btn sm ghost" type="button" data-act="file-unlink">取消連結</button>`;
+  } else {
+    fs.className = 'file-status warn';
+    fs.innerHTML = `<b>${esc(f.name)} 需要重新連結</b><span class="hint">瀏覽器重新開啟後，要按一下才能繼續自動存檔。</span>
+      <button class="btn sm primary" type="button" data-act="file-relink">重新連結</button>
+      <button class="btn sm ghost" type="button" data-act="file-unlink">取消連結</button>`;
+  }
+  // 上方提醒：檔案要重新連結，或太久沒備份
+  const bn = $('#backupNotice');
+  let snooze = 0; try { snooze = Number(localStorage.getItem(SNOOZE(state.pid))) || 0; } catch (e) {}
+  const days = Math.floor((Date.now() - (state.backupAt || state.createdAt || Date.now())) / 864e5);
+  if (f && !f.ok) {
+    bn.hidden = false;
+    bn.innerHTML = `<span>存檔檔案 ${esc(f.name)} 需要重新連結，修改才會自動存到檔案裡。</span>
+      <button class="btn sm" type="button" data-act="file-relink">重新連結</button>`;
+  } else if (!f?.ok && !state.isSample && state.students.length && (state.savedAt || 0) > (state.backupAt || 0) && days >= 3 && Date.now() > snooze) {
+    bn.hidden = false;
+    bn.innerHTML = `<span>${state.backupAt ? `距離上次備份已經 ${days} 天` : '這個班級還沒有備份過'}，換電腦或清除瀏覽紀錄就會遺失資料。</span>
+      <button class="btn sm" type="button" data-act="backup">下載備份檔</button>
+      ${FS_OK ? '<button class="btn sm" type="button" data-act="file-save">存成檔案…</button>' : ''}
+      <button class="btn sm ghost" type="button" data-act="snooze">明天再提醒</button>`;
+  } else bn.hidden = true;
+}
+
+const ui = { tab: 'students', sel: null, lastAuto: {}, itinPending: null, seatEdit: null, file: null };
 let state;
 
 /* ---------- 小工具 ---------- */
@@ -826,10 +1055,11 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
 }
-function confirmBox(msg, yes = '確定') {
+function confirmBox(msg, yes = '確定', no = '取消') {
   const d = $('#confirmDlg');
   $('#confirmMsg').textContent = msg;
   $('#confirmYes').textContent = yes;
+  $('#confirmNo').textContent = no;
   d.returnValue = '';
   return new Promise(res => {
     d.addEventListener('close', () => res(d.returnValue === 'yes'), { once: true });
@@ -1645,6 +1875,7 @@ function renderAll() {
   renderHeader(); renderStudents();
   Object.keys(BOARDS).forEach(renderBoard);
   renderContacts(); renderCare(); renderItinerary(); renderCards();
+  renderProjects(); renderStorage();
 }
 
 /* ---------- 學生編輯 ---------- */
@@ -1757,16 +1988,25 @@ document.addEventListener('click', async e => {
           save(); renderAll();
         }
         break;
+      case 'proj-new': newProject(); break;
+      case 'proj-switch': switchProject(a.dataset.id); break;
+      case 'proj-del': deleteProject(a.dataset.id); break;
+      case 'file-save': saveAsFile(); break;
+      case 'file-open': openFile(); break;
+      case 'file-relink': relinkFile(); break;
+      case 'file-unlink': idbDel(state.pid); ui.file = null; renderAll(); toast('已取消連結，資料仍保留在這個瀏覽器。'); break;
+      case 'snooze': try { localStorage.setItem(SNOOZE(state.pid), String(Date.now() + 864e5)); } catch (e) {} renderAll(); break;
       case 'clear-sample':
-        state = blankState(); save(); setTab('students');
+        state = Object.assign(blankState(), { pid: state.pid }); save(); setTab('students');
         $('#importBox').open = true; break;
       case 'load-sample':
         if (state.students.length && !state.isSample &&
             !(await confirmBox('載入範例會取代目前所有資料，建議先下載備份。確定嗎？', '載入範例'))) break;
-        state = sampleState(); save(); setTab('students'); break;
+        { const pid = state.pid; state = sampleState(); state.pid = pid; }
+        save(); setTab('students'); break;
       case 'reset-all':
-        if (await confirmBox('清除全部學生、分組與行程資料？此動作無法復原。', '全部清除')) {
-          state = blankState(); save(); renderAll(); toast('已清除全部資料。');
+        if (await confirmBox('清除這個班級的學生、分組與行程資料？此動作無法復原。', '清除')) {
+          state = Object.assign(blankState(), { pid: state.pid }); save(); renderAll(); toast('已清除這個班級的資料。');
         }
         break;
       case 'seat-reserve': toggleReserve(a.dataset.gid, a.dataset.seat); ui.seatEdit = null; renderAll(); break;
@@ -1792,7 +2032,9 @@ document.addEventListener('click', async e => {
         if (state.itinerary.length && await confirmBox('清空整個行程表？', '清空')) { state.itinerary = []; save(); renderAll(); }
         break;
       case 'backup':
+        state.backupAt = Date.now(); persist(false);
         download(`${fileStamp()}_校外教學備份.json`, JSON.stringify(state, null, 2), 'application/json');
+        renderAll();
         break;
     }
     return;
@@ -1932,12 +2174,17 @@ document.addEventListener('change', e => {
     if (g) { g.leaderId = el.value; save(); renderAll(); }
     return;
   }
+  if (el.id === 'projSel') {
+    const v = el.value; el.value = state.pid;
+    if (v === '__new') newProject(); else switchProject(v);
+    return;
+  }
   if (el.id === 'restoreFile' && el.files[0]) {
     el.files[0].text().then(async txt => {
       try {
         const next = normalizeState(JSON.parse(txt));
         if (!(await confirmBox(`還原備份（${next.students.length} 位學生）會取代目前資料，確定嗎？`, '還原'))) return;
-        state = next; save(); renderAll(); toast('已從備份還原。');
+        next.pid = state.pid; state = next; save(); renderAll(); toast('已從備份還原。');
       } catch (err) { toast('這不是本工具的備份檔，無法還原。'); }
       el.value = '';
     });
@@ -1985,8 +2232,9 @@ function sampleState() {
 state = load() || sampleState();
 const fromHash = location.hash.slice(1);
 if (TABS.some(([k]) => k === fromHash)) ui.tab = fromHash;
+persist(false);
 renderAll();
-save();
+loadFileHandle();
 </script>
 </body>
 </html>
