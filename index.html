@@ -255,6 +255,24 @@ body.selecting .chips { cursor: copy; outline: 2px dashed color-mix(in srgb, var
 body.selecting .seat { outline: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent); }
 .seat.aisle { grid-column: 3; }
 
+/* ---------- 學生小卡（名片大小 9 × 5.4 cm） ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+.scard {
+  aspect-ratio: 90 / 54; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  display: flex; flex-direction: column; padding: 8px 12px 8px 16px; position: relative; overflow: hidden; gap: 2px;
+}
+.scard::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 7px; background: var(--g-line); }
+.scard-top { display: flex; justify-content: space-between; gap: 8px; font-size: .78rem; color: var(--muted); font-weight: 700; }
+.scard-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scard-name { display: flex; align-items: baseline; gap: 8px; font-size: 1.55rem; font-weight: 900; color: var(--g-ink); line-height: 1.25; }
+.scard-name .num { font-size: 1.2rem; }
+.scard-cls { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
+.scard-info { margin: 0; display: grid; gap: 0; flex: 1; align-content: center; }
+.scard-info div { display: flex; gap: 8px; font-size: 1.05rem; min-width: 0; line-height: 1.45; }
+.scard-info dt { color: var(--muted); white-space: nowrap; width: 3.6em; flex: none; }
+.scard-info dd { margin: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scard-note { font-size: .78rem; border-top: 1px dashed var(--line); padding-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------- 設定頁 ---------- */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; }
 .form-grid.trip { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
@@ -350,6 +368,16 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   .stats { display: none; }
   #sec-contacts, #sec-students { page: wide; }
   .itin-panel { border: 0; padding: 0; }
+  #sec-cards .print-head { display: none; }
+  #sec-cards .cards { grid-template-columns: repeat(2, 90mm); grid-auto-rows: 54mm; gap: 0; justify-content: center; }
+  .scard { aspect-ratio: auto; width: 90mm; height: 54mm; border: 1px dashed #888; border-radius: 0; break-inside: avoid; padding: 2.5mm 3.5mm 2.5mm 5mm; }
+  .scard::before { width: 2.2mm; }
+  .scard-top { font-size: 7.5pt; }
+  .scard-name { font-size: 20pt; }
+  .scard-name .num { font-size: 16pt; }
+  .scard-cls { font-size: 8pt; }
+  .scard-info div { font-size: 11.5pt; }
+  .scard-note { font-size: 8.5pt; border-top-color: #999; }
   #itinPrint td.day { font-weight: 700; white-space: nowrap; }
   #itinPrint td.time { white-space: nowrap; font-family: var(--font-mono); }
   .buses { display: block; }
@@ -495,6 +523,21 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
   <section class="section printable" id="sec-rooms" data-tab="rooms" data-board="rooms"></section>
   <section class="section printable" id="sec-bus" data-tab="bus" data-board="bus"></section>
 
+  <!-- 學生小卡 -->
+  <section class="section printable" id="sec-cards" data-tab="cards">
+    <div class="ph"></div>
+    <div class="toolbar">
+      <span class="inline">卡片顯示：</span>
+      <label class="inline"><input type="checkbox" id="cs-activity" data-cards-show="activity"> 活動組</label>
+      <label class="inline"><input type="checkbox" id="cs-dining" data-cards-show="dining"> 用餐桌</label>
+      <label class="inline"><input type="checkbox" id="cs-rooms" data-cards-show="rooms"> 房間</label>
+      <label class="inline"><input type="checkbox" id="cs-bus" data-cards-show="bus"> 遊覽車座位</label>
+      <label class="inline" style="flex:1 1 320px">底部文字 <input type="text" id="cards-note" data-cards="note" style="flex:1" placeholder="例：帶隊老師 0912-345-678｜走散時到遊覽車旁集合"></label>
+    </div>
+    <p class="hint no-print" style="margin:-4px 0 10px">每張小卡為名片大小（9 × 5.4 公分），A4 一頁印 10 張，沿虛線剪下放進名牌套。底部文字會印在每一張卡上。</p>
+    <div class="cards" id="cardsBox"></div>
+  </section>
+
   <!-- 聯絡資料 -->
   <section class="section printable" id="sec-contacts" data-tab="contacts">
     <div class="ph"></div>
@@ -580,7 +623,7 @@ footer.foot { color: var(--muted); font-size: .8rem; margin-top: 30px; }
 const KEY = 'fieldtrip-planner-v1';
 const TABS = [
   ['settings', '行程資料'], ['students', '學生名單'], ['activity', '活動分組'], ['dining', '用餐分組'],
-  ['rooms', '房間分組'], ['bus', '遊覽車座位'], ['contacts', '聯絡資料'], ['care', '特殊照護'],
+  ['rooms', '房間分組'], ['bus', '遊覽車座位'], ['cards', '學生小卡'], ['contacts', '聯絡資料'], ['care', '特殊照護'],
 ];
 const FIELDS = ['no','name','gender','phone','ec1Name','ec1Rel','ec1Phone','ec2Name','ec2Rel','ec2Phone','diet','medical','note'];
 const LABELS = { no:'座號', name:'姓名', gender:'性別', phone:'學生手機', ec1Name:'緊急聯絡人1', ec1Rel:'關係1', ec1Phone:'電話1',
@@ -641,6 +684,7 @@ function blankState() {
     rooms: { cap: 4, groups: [] },
     bus: { n: 1, rows: 12, back5: true, sameGender: true, frontDoor: true, safeDoor: 7, backDoor: 8, groups: [] },
     itinerary: [],
+    cards: { note: '', show: { activity: true, dining: true, rooms: true, bus: true } },
     isSample: false,
   };
 }
@@ -663,6 +707,7 @@ function normalizeState(s) {
     // 舊版座位設定沒有前門欄位，換成新的 43 人座預設
     bus: Object.assign(b.bus, s.bus && s.bus.frontDoor === undefined ? Object.assign({}, s.bus, { rows: 12, safeDoor: 7, backDoor: 8, frontDoor: true }) : s.bus || {}),
     itinerary: Array.isArray(s.itinerary) ? s.itinerary : [],
+    cards: { note: s.cards?.note || '', show: Object.assign(b.cards.show, s.cards?.show || {}) },
     isSample: !!s.isSample,
   };
 }
@@ -1413,6 +1458,27 @@ function renderBus() {
     </div>`;
   $('#bus-mode').value = prevMode;
 }
+function renderCards() {
+  const sec = $('#sec-cards'), t = state.trip, c = state.cards;
+  sec.querySelector('.ph').innerHTML = printHead('學生小卡');
+  Object.keys(c.show).forEach(k => { const el = $('#cs-' + k); if (el) el.checked = !!c.show[k]; });
+  if (document.activeElement !== $('#cards-note')) $('#cards-note').value = c.note;
+  const ma = memberOf('activity'), md = memberOf('dining'), mr = memberOf('rooms');
+  const rows = s => [
+    c.show.activity && ['活動組', ma[s.id]?.name],
+    c.show.dining && ['用餐', md[s.id]?.name],
+    c.show.rooms && ['房間', mr[s.id]?.name],
+    c.show.bus && ['遊覽車', busSeatText(s.id)],
+  ].filter(Boolean);
+  const list = sortedStudents();
+  $('#cardsBox').innerHTML = list.length ? list.map(s => `<div class="scard ${gcls(s.gender)}">
+      <div class="scard-top"><span>${esc(t.title || '校外教學')}</span><span>${esc(t.date)}</span></div>
+      <div class="scard-name"><span class="num">${esc(s.no)}</span>${esc(s.name)}<span class="scard-cls">${esc(t.cls)}</span></div>
+      <dl class="scard-info">${rows(s).map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v || '—')}</dd></div>`).join('')}</dl>
+      ${c.note ? `<div class="scard-note">${esc(c.note)}</div>` : ''}
+    </div>`).join('')
+    : '<p class="hint">還沒有學生。請先到「學生名單」匯入名單。</p>';
+}
 function renderContacts() {
   const sec = $('#sec-contacts');
   sec.querySelector('.ph').innerHTML = printHead('學生緊急聯絡資料');
@@ -1446,7 +1512,7 @@ function renderAll() {
   document.body.classList.toggle('selecting', !!ui.sel);
   renderHeader(); renderStudents();
   Object.keys(BOARDS).forEach(renderBoard);
-  renderContacts(); renderCare(); renderItinerary();
+  renderContacts(); renderCare(); renderItinerary(); renderCards();
 }
 
 /* ---------- 學生編輯 ---------- */
@@ -1656,6 +1722,7 @@ document.addEventListener('drop', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.trip) { state.trip[el.dataset.trip] = el.value; save(); renderHeader(); return; }
+  if (el.dataset.cards) { state.cards[el.dataset.cards] = el.value; save(); renderCards(); return; }
   if (el.dataset.rv) {
     const [gid, seat] = el.dataset.rv.split(':');
     const b = state.bus.groups.find(x => x.id === gid);
@@ -1689,6 +1756,7 @@ document.addEventListener('change', e => {
     if (k === 'bus' && prop === 'n') setBusCount(v); else state[k][prop] = v;
     save(); renderAll(); return;
   }
+  if (el.dataset.cardsShow) { state.cards.show[el.dataset.cardsShow] = el.checked; save(); renderCards(); return; }
   if (el.dataset.busNum) { state.bus[el.dataset.busNum] = Math.max(0, parseInt(el.value, 10) || 0); save(); renderAll(); return; }
   if (el.dataset.busOpt) { state.bus[el.dataset.busOpt] = el.checked; save(); renderAll(); return; }
   if (el.dataset.itin || el.dataset.rv) { renderAll(); return; }
@@ -1727,6 +1795,7 @@ function sampleState() {
   s.isSample = true;
   Object.assign(s.trip, { title: '六年級校外教學', date: '2026/11/12–11/13', place: '六福村主題樂園、台中科博館', cls: '六年三班',
     school: '範例國小' });
+  s.cards.note = '帶隊老師 林老師 0900-000-000｜走散時到遊覽車旁集合';
   s.itinerary = parseItinerary([
     ['日期', '時間', '行程', '地點', '備註'],
     ['11/12（四）', '07:30', '學校集合、點名', '學校穿堂', '提早 10 分鐘到'],
